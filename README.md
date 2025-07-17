@@ -11,7 +11,6 @@
 
 <p align="center">
   <a href="#status" alt="Estado do Projeto"><img src="http://img.shields.io/static/v1?label=STATUS&message=EM%20DESENVOLVIMENTO&color=GREEN&style=flat" /></a>
-   <a href=""><img src="https://img.shields.io/badge/npm-10.8.2-blue" alt="python version"></a>
   <a href=""><img src="https://img.shields.io/badge/python-3.12.6-green" alt="python version"></a>
 </p>
 
