@@ -55,5 +55,9 @@ A biblioteca foi projetada exclusivamente para o ambiente Databricks, aproveitan
 
 
 ## Arquitetura
+A arquitetura da biblioteca foi projetada para ser leve, objetiva e totalmente integrada ao ecossistema do Azure Databricks. Ela promove a automação da ingestão de arquivos avulsos por meio de uma interface de linha de comando (CLI) simples e eficiente. O objetivo é abstrair a complexidade da leitura e persistência de dados em ambientes Spark, eliminando a necessidade de arquivos de configuração externos.
+
+O processo de ingestão ocorre em um ambiente Databricks já provisionado por uma estrutura automatizada de infraestrutura (DINO-ARC), garantindo consistência e segurança na criação de recursos como Storage Accounts, SQL Databases e integrações com Key Vault e Active Directory. A execução da CLI ocorre dentro do Databricks, aproveitando os recursos do ambiente para orquestrar a leitura de dados brutos e sua persistência no delta lake.
+<img width="1204" height="581" alt="image" src="https://github.com/user-attachments/assets/f648b409-888b-422e-8ad6-26aaecab61ec" />
 
 
