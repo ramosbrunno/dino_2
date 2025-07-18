@@ -16,7 +16,7 @@
 
 ## Introdução
 
-DINO é uma SDK para ingestão de arquivos manuais, criado para solucionar um problema recorrente em áreas de negócio. O objetivo principal é otimizar o processo de ingestão de arquivos em ambientes de big data cloud, oferecendo uma solução escalável e amigável, mas mantendo toda a governança dos dados.
+DINO é a solução definitiva para otimizar a ingestão manual de arquivos, resolvendo um problema persistente para muitas áreas de negócio. Nosso objetivo é simplificar radicalmente o uso e garantir que as boas práticas sejam seguidas de forma organizada e controlada. Isso resulta em uma solução que não só é escalável e intuitiva, mas que também assegura a governança completa dos dados. Com o DINO, o processo se torna fácil de adotar para quem usa e simples de manter para a equipe técnica, entregando valor de forma consistente.
 
 
 ## Contexto
