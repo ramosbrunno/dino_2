@@ -64,10 +64,10 @@ O processo de ingestão de dados acontece em um ambiente Databricks, provisionad
 
 ### Arquitetura Técnica
 
-<img width="1210" height="666" alt="image" src="https://github.com/user-attachments/assets/1d0ba4ed-d684-48ba-82ea-9b5a53ac4a67" />
+<img width="1210" height="673" alt="image" src="https://github.com/user-attachments/assets/1e1ec91f-e7f5-4754-8e8c-db2c1406651f" />
 
-Visão Técnica da Ingestão com o DINO
-O DINO é um componente de automação que orquestra a leitura e a gravação de dados em ambientes Databricks, operando sobre a arquitetura Medallion. A seguir, detalhamos seu funcionamento técnico na movimentação de arquivos da camada RAW para a Sandbox ou diretamente para a camada Bronze.
+
+O DINO é um componente de automação que orquestra a leitura e a gravação de dados em ambientes Databricks, operando sobre a arquitetura Medalhão. A seguir, detalhamos seu funcionamento técnico na movimentação de arquivos da camada RAW para a Sandbox ou diretamente para a camada Bronze.
 
 #### Inicialização via CLI
 
