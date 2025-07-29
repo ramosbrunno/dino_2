@@ -1,0 +1,32 @@
+# Diretório de ambiente virtual
+venv/
+
+# Arquivos compilados do Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Configurações de editor/IDE
+.vscode/
+.idea/
+
+# Logs e arquivos temporários
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de dependências
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Arquivos de Teraform
+*.tfstate
+*.tfstate.backup
