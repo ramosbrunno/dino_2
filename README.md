@@ -16,7 +16,7 @@
 
 ## Introdução
 
-DINO é a solução definitiva para otimizar a ingestão manual de arquivos, resolvendo um problema persistente para muitas áreas de negócio. Nosso objetivo é simplificar radicalmente o uso e garantir que as boas práticas sejam seguidas de forma organizada e controlada. Isso resulta em uma solução que não só é escalável e intuitiva, mas que também assegura a governança completa dos dados. Com o DINO, o processo se torna fácil de adotar para quem usa e simples de manter para a equipe técnica, entregando valor de forma consistente.
+DINO é a solução definitiva para democratizar a ingestão de arquivos, resolvendo um problema persistente para muitas áreas de negócio. Nosso objetivo é simplificar radicalmente o uso e garantir que as boas práticas sejam seguidas de forma organizada e controlada. Isso resulta em uma solução que não só é escalável e intuitiva, mas que também assegura a governança completa dos dados. Com o DINO, o processo se torna fácil de adotar para quem usa e simples de manter para a equipe técnica, entregando valor de forma consistente.
 
 
 ## Contexto
