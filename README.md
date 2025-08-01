@@ -32,7 +32,6 @@ Este projeto nasce como uma proposta para automatizar esse fluxo, reduzindo depe
 
 ## Proposta
 
-Proposta
 Como solução para os desafios apresentados, propomos a criação de uma biblioteca PySpark especializada na ingestão de arquivos avulsos, com foco em simplicidade, reusabilidade e escalabilidade. A biblioteca será distribuída como um pacote Python e poderá ser executada a partir de uma CLI (Command Line Interface) intuitiva e configurável.
 
 Essa abordagem tem como objetivo principal abstrair a complexidade técnica do processo de ingestão, permitindo que diferentes times consigam operar e manter o pipeline de forma padronizada, auditável e segura.
