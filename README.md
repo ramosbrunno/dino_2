@@ -64,10 +64,11 @@ O processo de ingestão de dados acontece em um ambiente Databricks, provisionad
 
 ### Arquitetura Técnica
 
+O DINO é um componente de automação que orquestra a leitura e a gravação de dados em ambientes Databricks, operando sobre qualquer arquitetura: Medalhão ou Data Vault, por exemplo. A seguir, detalhamos seu funcionamento técnico na movimentação de arquivos da camada RAW para a Sandbox ou diretamente para a camada Bronze ou Landing Area.
+
 <img width="1210" height="673" alt="image" src="https://github.com/user-attachments/assets/1e1ec91f-e7f5-4754-8e8c-db2c1406651f" />
+<img width="1361" height="904" alt="image" src="https://github.com/user-attachments/assets/800aeb67-368d-417d-b352-d34aaec09ddb" />
 
-
-O DINO é um componente de automação que orquestra a leitura e a gravação de dados em ambientes Databricks, operando sobre a arquitetura Medalhão. A seguir, detalhamos seu funcionamento técnico na movimentação de arquivos da camada RAW para a Sandbox ou diretamente para a camada Bronze.
 
 #### Inicialização via CLI
 
