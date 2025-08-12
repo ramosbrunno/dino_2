@@ -1,8 +1,9 @@
 class AzureAuth:
-    def __init__(self, client_id, client_secret, tenant_id):
+    def __init__(self, client_id, client_secret, tenant_id, subscription_id):
         self.client_id = client_id
         self.client_secret = client_secret
         self.tenant_id = tenant_id
+        self.subscription_id = subscription_id
 
     def authenticate(self):
         from azure.identity import ClientSecretCredential

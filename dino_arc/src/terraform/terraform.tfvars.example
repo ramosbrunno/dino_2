@@ -1,0 +1,59 @@
+
+# Exemplo de arquivo terraform.tfvars
+# Copie este arquivo para terraform.tfvars e ajuste os valores conforme necessário
+
+# ========================
+# Configuração Principal
+# ========================
+
+# Nome do projeto (usado como base para todos os recursos)
+# Exemplo: "data-master" criará "data-master-dev-rsg" e "data-master-dev-akv-abc123"
+projeto = "data-master"
+
+# Ambiente (dev, staging, prod)
+ambiente = "prod"
+
+# Localização do Azure (região)
+location = "East US"
+
+# ========================
+# Configurações Opcionais
+# ========================
+
+# SKU do Key Vault (standard ou premium)
+keyvault_sku_name = "standard"
+
+# Proteção contra purge (recomendado para produção)
+keyvault_purge_protection_enabled = false  # true para produção
+
+# ========================
+# Tags Personalizadas (Opcionais)
+# ========================
+
+# Tags adicionais - serão mescladas com as tags padrão:
+# Project, Environment, ManagedBy, CreatedBy
+tags = {
+  CostCenter  = "engineering"
+  Department  = "data-analytics"
+  Backup      = "daily"
+  Security    = "high"
+  Owner       = "time-dados"
+}
+
+# ========================
+# Exemplos de Configuração
+# ========================
+
+# Para desenvolvimento:
+# projeto = "meu-projeto"
+# ambiente = "dev"
+# location = "East US"
+# keyvault_sku_name = "standard"
+# keyvault_purge_protection_enabled = false
+
+# Para produção:
+# projeto = "meu-projeto"
+# ambiente = "prod"  
+# location = "Brazil South"
+# keyvault_sku_name = "premium"
+# keyvault_purge_protection_enabled = true
