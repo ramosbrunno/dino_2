@@ -1,0 +1,16 @@
+include README.md
+include requirements.txt
+include EXEMPLOS_CLI.md
+recursive-include src/terraform *.tf
+recursive-include src/terraform *.tfvars.example
+recursive-include src/terraform *.gitignore
+recursive-include src/terraform/modules *.tf
+recursive-include src/databricks_config *.py
+recursive-include src/databricks_config *.sh
+recursive-include src/databricks_config *.bat
+recursive-include src/databricks_config *.md
+recursive-include tests *.py
+recursive-include tests *.md
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.egg-info

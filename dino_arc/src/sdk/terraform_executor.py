@@ -110,31 +110,3 @@ class TerraformExecutor:
             text=True
         )
         return result
-    
-    def get_outputs(self):
-        """
-        Obtém os outputs do Terraform em formato JSON
-        
-        Returns:
-            Dict com os outputs do Terraform ou None se houver erro
-        """
-        try:
-            result = subprocess.run(
-                ["terraform", "output", "-json"], 
-                cwd=self.working_directory,
-                capture_output=True,
-                text=True
-            )
-            
-            if result.returncode == 0:
-                return json.loads(result.stdout)
-            else:
-                print(f"Erro ao obter outputs: {result.stderr}")
-                return None
-                
-        except json.JSONDecodeError as e:
-            print(f"Erro ao decodificar JSON dos outputs: {e}")
-            return None
-        except Exception as e:
-            print(f"Erro inesperado ao obter outputs: {e}")
-            return None

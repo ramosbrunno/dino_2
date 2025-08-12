@@ -1,21 +1,6 @@
 # Variables for Azure Resources Configuration - Modular Architecture
 
 # ========================
-# Azure Authentication Variables
-# ========================
-
-variable "subscription_id" {
-  description = "Azure Subscription ID onde os recursos serão criados"
-  type        = string
-  sensitive   = true
-  
-  validation {
-    condition     = can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", var.subscription_id))
-    error_message = "Subscription ID deve estar no formato UUID válido."
-  }
-}
-
-# ========================
 # Core Project Variables
 # ========================
 

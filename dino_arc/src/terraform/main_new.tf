@@ -27,9 +27,6 @@ provider "azurerm" {
       recover_soft_deleted_key_vaults = true
     }
   }
-  
-  # Usar subscription_id se fornecida via variável
-  subscription_id = var.subscription_id
 }
 
 # Configure the Azure AD Provider

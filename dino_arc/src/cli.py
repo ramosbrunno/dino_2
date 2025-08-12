@@ -75,6 +75,31 @@ def configure_databricks_environment(projeto, ambiente, location, terraform_exec
         print(f"❌ Erro durante configuração do Databricks: {str(e)}")
         return False
 
+def ensure_terraform_initialized(terraform_executor):
+    """
+    Garante que o Terraform está inicializado antes de executar comandos
+    """
+    print("🔧 Verificando inicialização do Terraform...")
+    
+    # Verificar se já foi inicializado (existe .terraform)
+    import os
+    terraform_dir = os.path.join(os.path.dirname(__file__), "terraform")
+    terraform_state_dir = os.path.join(terraform_dir, ".terraform")
+    
+    if not os.path.exists(terraform_state_dir):
+        print("📦 Terraform não inicializado. Executando init...")
+        result = terraform_executor.init()
+        if result.returncode == 0:
+            print("✅ Terraform inicializado com sucesso!")
+            return True
+        else:
+            print("❌ Erro ao inicializar Terraform:")
+            print(result.stderr)
+            return False
+    else:
+        print("✅ Terraform já inicializado!")
+        return True
+
 def main():
     parser = argparse.ArgumentParser(description='Dino ARC CLI - Complete Azure Infrastructure Creator')
     
@@ -82,10 +107,11 @@ def main():
     parser.add_argument('--client-id', required=True, help='Azure Client ID')
     parser.add_argument('--client-secret', required=True, help='Azure Client Secret')
     parser.add_argument('--tenant_id', required=True, help='Azure Tenant ID')
+    parser.add_argument('--subscription-id', required=True, help='Azure Subscription ID')
     
     # Ação do Terraform
     parser.add_argument('--action', choices=['init', 'plan', 'apply', 'destroy'], required=True, 
-                       help='Ação que será executada no script Terraform')
+                       help='Ação que será executada no script Terraform (init é opcional - executado automaticamente)')
     
     # Parâmetros principais (simplificados)
     parser.add_argument('--projeto', type=str, required=True,
@@ -102,7 +128,7 @@ def main():
         parser.error(f"--projeto é obrigatório para a ação '{args.action}'")
 
     # Autenticação Azure
-    azure_auth = AzureAuth(args.client_id, args.client_secret, args.tenant_id)
+    azure_auth = AzureAuth(args.client_id, args.client_secret, args.tenant_id, args.subscription_id)
     azure_auth.authenticate()
 
     # Executor Terraform
@@ -118,8 +144,13 @@ def main():
             print(result.stderr)
     
     elif args.action == 'plan':
+        # Garantir que Terraform está inicializado
+        if not ensure_terraform_initialized(terraform_executor):
+            return
+        
         # Preparar variáveis para o Terraform (infraestrutura completa)
         variables = {
+            "subscription_id": args.subscription_id,
             "projeto": args.projeto,
             "ambiente": args.ambiente,
             "location": args.location
@@ -139,6 +170,10 @@ def main():
             print(result.stderr)
     
     elif args.action == 'apply':
+        # Garantir que Terraform está inicializado
+        if not ensure_terraform_initialized(terraform_executor):
+            return
+            
         # Gerar nomes dos recursos usando o padrão projeto-ambiente-sufixo
         resource_group_name = f"{args.projeto}-{args.ambiente}-rsg"
         service_principal_name = f"{args.projeto}-{args.ambiente}-spn"
@@ -153,6 +188,7 @@ def main():
 
         # Preparar variáveis para o Terraform (infraestrutura completa)
         variables = {
+            "subscription_id": args.subscription_id,
             "projeto": args.projeto,
             "ambiente": args.ambiente,
             "location": args.location
@@ -193,6 +229,10 @@ def main():
             print(result.stderr)
     
     elif args.action == 'destroy':
+        # Garantir que Terraform está inicializado
+        if not ensure_terraform_initialized(terraform_executor):
+            return
+            
         resource_group_name = f"{args.projeto}-{args.ambiente}-rsg"
         service_principal_name = f"{args.projeto}-{args.ambiente}-spn"
         
@@ -205,6 +245,7 @@ def main():
         
         # Preparar variáveis para o Terraform (infraestrutura completa)
         variables = {
+            "subscription_id": args.subscription_id,
             "projeto": args.projeto,
             "ambiente": args.ambiente,
             "location": args.location
