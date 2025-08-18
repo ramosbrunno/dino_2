@@ -53,6 +53,37 @@ Benefícios esperados:
 A biblioteca foi projetada exclusivamente para o ambiente Databricks, aproveitando todo o potencial da plataforma, como o manuseio eficiente de arquivos em cloud storage, execução distribuída, notebooks integrados, jobs agendados e logs centralizados. Isso garante maior integração com os recursos nativos da plataforma e promove uma adoção mais fluida pelos times técnicos.
 
 
+## Execução do Projeto
+
+A execução do projeto DINO ocorre em duas etapas fundamentais e sequenciais, cada uma com seu SDK específico:
+
+### 1. DINO ARC - Provisionamento de Infraestrutura
+
+O primeiro passo é a execução do **DINO ARC** (Azure Resource Creation), responsável pelo provisionamento automático de toda a infraestrutura necessária no Azure. Esta etapa funcional abrange:
+
+- Criação e configuração do ambiente Azure Databricks
+- Provisionamento de Storage Accounts para as camadas de dados (RAW, Bronze, Silver, Gold)
+- Configuração de Azure SQL Database para logs técnicos e metadados
+- Integração com Azure Key Vault para gerenciamento seguro de credenciais
+- Configuração de permissões e políticas de segurança via Azure Active Directory
+- Setup automático de redes e conectividade entre os serviços
+
+Para informações detalhadas sobre instalação, configuração e execução do DINO ARC, consulte o [README do DINO ARC](./dino_arc/README.md).
+
+### 2. DINO SDK - Execução da Ingestão de Dados
+
+Após o provisionamento da infraestrutura, o **DINO SDK** (Data Ingestion Non Optimized) é utilizado para realizar a ingestão propriamente dita. Esta etapa funcional engloba:
+
+- Interface CLI intuitiva para execução de ingestões
+- Motor de processamento de arquivos com suporte a múltiplos formatos
+- Orquestração de workflows de dados automatizados
+- Aplicação de regras de qualidade e validação de dados
+- Geração automática de logs e relatórios de execução
+- Suporte a execução em modo batch
+
+Para informações detalhadas sobre instalação, configuração e exemplos de uso do DINO SDK, consulte o [README do DINO SDK](./dino_sdk/README.md).
+
+
 ## Arquitetura
 
 ### Visão Geral
@@ -72,12 +103,7 @@ O DINO é um componente de automação que orquestra a leitura e a gravação de
 
 #### Inicialização via CLI
 
-A ingestão é iniciada por meio de uma chamada à CLI do DINO, que recebe os seguintes parâmetros obrigatórios:
- - --target-schema: schema destino da ingestão
- - --table-name: nome lógico da entidade a ser processada
- - --file-path: caminho completo do arquivo a ser ingerido no storage RAW
- - --delimiter: delimitador utilizado no arquivo de origem
- - --is-automated: true, realiza ingestão assim que o arquivo é colocado no diretório sem a necessidade de schedule de job
+A ingestão é iniciada por meio de uma chamada à CLI do DINO, que oferece uma interface intuitiva e configurável. A CLI recebe parâmetros essenciais que definem o esquema de destino, entidade a ser processada, localização do arquivo de origem e configurações de processamento, incluindo opções para execução automatizada ou sob demanda.
 
 #### Resolução de Metadados
 Com base no nome do schema e da tabela informados, o DINO realiza consultas ao catálogo de metadados internos para:
@@ -110,6 +136,70 @@ Durante toda a execução, o DINO registra logs técnicos e operacionais em uma 
  - Paths utilizados: caminhos de origem e destino dos arquivos
  - Tempo total de execução
  - Detalhamento de erros, quando houver, incluindo mensagens e stack trace (se aplicável)
+
+
+## Melhorias do Projeto
+
+O projeto DINO possui diversos pontos de evolução e melhorias que podem ser implementados em versões futuras para expandir suas capacidades e otimizar sua performance:
+
+### Funcionalidades
+- **Suporte a novos formatos de arquivo**: Extensão para formatos como Parquet, Avro, ORC e XML
+- **Processamento em tempo real**: Implementação de streaming para ingestão contínua de dados
+- **Interface gráfica**: Desenvolvimento de uma UI web para facilitar o uso por usuários não técnicos
+- **Conectores nativos**: Integração direta com sistemas como SAP, Oracle, SQL Server e APIs REST
+- **Validação avançada de dados**: Implementação de regras de qualidade de dados mais robustas
+- **Suporte multi-cloud**: Expansão para AWS e Google Cloud Platform
+
+### Performance e Escalabilidade
+- **Processamento paralelo**: Otimização para processamento distribuído de múltiplos arquivos
+- **Cache inteligente**: Implementação de estratégias de cache para melhorar performance
+- **Compressão automática**: Otimização de armazenamento com compressão adaptativa
+- **Auto-scaling**: Dimensionamento automático de recursos baseado no volume de dados
+
+### Governança e Segurança
+- **Data lineage**: Rastreamento completo da linhagem dos dados
+- **Catalogação automática**: Integração com catálogos de dados empresariais
+- **Criptografia avançada**: Implementação de criptografia end-to-end
+- **Auditoria completa**: Logs detalhados para compliance e auditoria
+
+### Operação e Monitoramento
+- **Dashboard de monitoramento**: Interface para acompanhamento em tempo real das execuções
+- **Alertas proativos**: Sistema de notificações para falhas e anomalias
+- **Métricas de performance**: Coleta e análise de métricas operacionais
+- **Backup e recuperação**: Estratégias automatizadas de backup e disaster recovery
+
+
+## Referências do Projeto
+
+Este projeto foi desenvolvido utilizando as melhores práticas e tecnologias de mercado. Abaixo estão as principais referências técnicas utilizadas:
+
+### Plataformas e Serviços Cloud
+- **[Azure Databricks](https://docs.microsoft.com/en-us/azure/databricks/)** - Plataforma de analytics unificada
+- **[Azure Storage](https://docs.microsoft.com/en-us/azure/storage/)** - Serviços de armazenamento em nuvem
+- **[Azure SQL Database](https://docs.microsoft.com/en-us/azure/azure-sql/)** - Banco de dados gerenciado
+- **[Azure Key Vault](https://docs.microsoft.com/en-us/azure/key-vault/)** - Gerenciamento de chaves e segredos
+- **[Azure Active Directory](https://docs.microsoft.com/en-us/azure/active-directory/)** - Serviços de identidade
+
+### Tecnologias de Processamento de Dados
+- **[Apache Spark](https://spark.apache.org/docs/latest/)** - Motor de processamento distribuído
+- **[Delta Lake](https://docs.delta.io/latest/index.html)** - Camada de armazenamento para data lakes
+- **[PySpark](https://spark.apache.org/docs/latest/api/python/)** - API Python para Apache Spark
+- **[Liquid Clustering](https://docs.databricks.com/en/delta/clustering.html)** - Otimização de performance para Delta Lake
+
+### Frameworks e Bibliotecas Python
+- **[Python](https://docs.python.org/3/)** - Linguagem de programação principal
+- **[Click](https://click.palletsprojects.com/)** - Framework para criação de CLIs
+- **[PyTest](https://docs.pytest.org/)** - Framework de testes
+
+### Infraestrutura como Código
+- **[Terraform](https://www.terraform.io/docs)** - Provisionamento de infraestrutura
+- **[Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)** - Provider Terraform para Azure
+
+### Arquiteturas de Referência
+- **[Microsoft Data Architecture Guide](https://docs.microsoft.com/en-us/azure/architecture/data-guide/)** - Guia de arquitetura de dados da Microsoft
+- **[Databricks Lakehouse Platform](https://docs.databricks.com/lakehouse/index.html)** - Arquitetura Lakehouse
+- **[Medallion Architecture](https://www.databricks.com/glossary/medallion-architecture)** - Padrão de arquitetura em camadas
+- **[Data Vault 2.0](https://datavaultalliance.com/)** - Metodologia de modelagem de dados
 
 
 
