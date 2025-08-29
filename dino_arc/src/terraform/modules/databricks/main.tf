@@ -14,13 +14,6 @@ terraform {
   }
 }
 
-# Generate random suffix for globally unique names
-resource "random_string" "databricks_suffix" {
-  length  = 6
-  special = false
-  upper   = false
-}
-
 # Generate random token for Databricks API (simulated for configuration)
 resource "random_password" "databricks_token" {
   length  = 32
@@ -30,12 +23,18 @@ resource "random_password" "databricks_token" {
   numeric = true
 }
 
+# Generate random 4-digit ID for DBFS storage accounts (globally unique requirement)
+resource "random_integer" "storage_id" {
+  min = 1000
+  max = 9999
+}
+
 # Local values for resource naming and configuration
 locals {
-  # Nomenclatura padrão: projeto-ambiente-sufixo
-  databricks_workspace_name = "${var.projeto}-${var.ambiente}-dbw-${random_string.databricks_suffix.result}"
-  storage_account_name      = "${replace(var.projeto, "-", "")}${var.ambiente}dbwsa${random_string.databricks_suffix.result}"
-  unity_catalog_storage     = "${replace(var.projeto, "-", "")}${var.ambiente}ucsa${random_string.databricks_suffix.result}"
+  # Nomenclatura descritiva: projeto-ambiente-tipo-funcionalidade
+  databricks_workspace_name = "${var.projeto}-${var.ambiente}-dbw"
+  storage_account_name      = "${replace(var.projeto, "-", "")}${var.ambiente}sadbw${random_integer.storage_id.result}"
+  unity_catalog_storage     = "${replace(var.projeto, "-", "")}${var.ambiente}sauc"
   
   # Tags padrão para o módulo Databricks
   default_tags = {
@@ -124,8 +123,7 @@ resource "azurerm_databricks_workspace" "main" {
   sku                 = "premium"  # Always Premium for Unity Catalog
 
   # Configurações de rede para acesso à internet e Serverless
-  public_network_access_enabled         = true   # Permitir acesso à internet
-  network_security_group_rules_required = "NoAzureDatabricksRules"
+  public_network_access_enabled = true   # Permitir acesso à internet
   
   # Configurações customizadas para Premium
   custom_parameters {

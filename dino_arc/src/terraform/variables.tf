@@ -70,47 +70,10 @@ variable "tags" {
 # ========================
 
 variable "enable_databricks" {
-  description = "Se deve criar o Azure Databricks workspace"
-  type        = bool
-  default     = false
-}
-
-# ========================
-# Databricks Module Variables
-# ========================
-
-variable "databricks_sku" {
-  description = "SKU do Azure Databricks (standard, premium, trial)"
-  type        = string
-  default     = "standard"
-  
-  validation {
-    condition     = contains(["standard", "premium", "trial"], var.databricks_sku)
-    error_message = "SKU deve ser 'standard', 'premium' ou 'trial'."
-  }
-}
-
-variable "databricks_public_network_access" {
-  description = "Se o acesso à rede pública deve ser habilitado no Databricks"
+  description = "Se deve criar o Azure Databricks workspace (habilitado por padrão)"
   type        = bool
   default     = true
 }
-
-variable "databricks_no_public_ip" {
-  description = "Se deve usar Secure Cluster Connectivity (sem IP público)"
-  type        = bool
-  default     = false
-}
-
-variable "databricks_store_secrets" {
-  description = "Se deve armazenar informações do Databricks no Key Vault"
-  type        = bool
-  default     = true
-}
-
-# ========================
-# SQL Database for Logging Variables
-# ========================
 
 # ========================
 # SQL Database for Dino SDK Pipeline Logging Variables
@@ -119,7 +82,7 @@ variable "databricks_store_secrets" {
 variable "enable_sql_database" {
   description = "Se deve criar Azure SQL Database para logs do Dino SDK"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "sql_admin_username" {

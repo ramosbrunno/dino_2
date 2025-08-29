@@ -80,12 +80,12 @@ output "sql_database_name" {
 
 output "sql_connection_string_secret_name" {
   description = "Nome do secret no Key Vault com connection string (se habilitado)"
-  value       = var.enable_sql_database ? module.sql_database[0].connection_string_secret_name : null
+  value       = var.enable_sql_database ? "sql-connection-string" : null
 }
 
 output "dino_sdk_database_config" {
   description = "Configuração do banco para uso do Dino SDK (se habilitado)"
-  value       = var.enable_sql_database ? module.sql_database[0].dino_sdk_database_config : null
+  value       = var.enable_sql_database ? module.sql_database[0].sql_connection_info : null
   sensitive   = false
 }
 
@@ -98,7 +98,7 @@ output "deployment_summary" {
   value = {
     foundation = module.foundation.foundation_summary
     databricks = var.enable_databricks ? module.databricks[0].databricks_summary : null
-    sql_database = var.enable_sql_database ? module.sql_database[0].dino_sdk_database_config : null
+    sql_database = var.enable_sql_database ? module.sql_database[0].sql_connection_info : null
     modules_enabled = {
       foundation = true
       databricks = var.enable_databricks

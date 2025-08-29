@@ -70,12 +70,6 @@ module "databricks" {
   key_vault_id                 = module.foundation.key_vault_id
   service_principal_object_id   = module.foundation.service_principal_object_id
 
-  # Databricks-specific configurations
-  databricks_sku               = var.databricks_sku
-  public_network_access_enabled = var.databricks_public_network_access
-  no_public_ip                 = var.databricks_no_public_ip
-  store_secrets_in_keyvault    = var.databricks_store_secrets
-
   depends_on = [module.foundation]
 }
 
@@ -89,25 +83,16 @@ module "sql_database" {
   source = "./modules/sql_database"
 
   # Basic parameters
-  projeto   = var.projeto
-  ambiente  = var.ambiente
+  projeto  = var.projeto
+  ambiente = var.ambiente
+  location = var.location
 
   # Dependencies from foundation module
-  resource_group_name           = module.foundation.resource_group_name
-  key_vault_name               = module.foundation.key_vault_name
+  resource_group_name = module.foundation.resource_group_name
+  key_vault_id       = module.foundation.key_vault_id
 
-  # Azure AD admin (usar service principal do foundation)
-  azuread_admin_login          = module.foundation.service_principal_display_name
-  azuread_admin_object_id      = module.foundation.service_principal_object_id
-
-  # SQL Database configurations
-  sql_admin_username           = var.sql_admin_username
-  sql_database_sku            = var.sql_database_sku
-  enable_public_access        = var.sql_enable_public_access
-  enable_azure_services_access = var.sql_enable_azure_services_access
-  sql_firewall_rules          = var.sql_firewall_rules
-  enable_private_endpoint     = var.sql_enable_private_endpoint
-  subnet_id                   = var.sql_subnet_id
+  # Tags
+  tags = var.tags
 
   depends_on = [module.foundation]
 }
