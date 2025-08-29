@@ -107,3 +107,63 @@ variable "databricks_store_secrets" {
   type        = bool
   default     = true
 }
+
+# ========================
+# SQL Database for Logging Variables
+# ========================
+
+# ========================
+# SQL Database for Dino SDK Pipeline Logging Variables
+# ========================
+
+variable "enable_sql_database" {
+  description = "Se deve criar Azure SQL Database para logs do Dino SDK"
+  type        = bool
+  default     = false
+}
+
+variable "sql_admin_username" {
+  description = "Username do administrador SQL"
+  type        = string
+  default     = "sqladmin"
+}
+
+variable "sql_database_sku" {
+  description = "SKU do SQL Database (Basic, S1, S2, P1, etc.)"
+  type        = string
+  default     = "Basic"
+}
+
+variable "sql_enable_public_access" {
+  description = "Habilitar acesso público ao SQL Server"
+  type        = bool
+  default     = true
+}
+
+variable "sql_enable_azure_services_access" {
+  description = "Permitir acesso de serviços Azure ao SQL Server"
+  type        = bool
+  default     = true
+}
+
+variable "sql_firewall_rules" {
+  description = "Lista de regras de firewall para SQL Server"
+  type = list(object({
+    name     = string
+    start_ip = string
+    end_ip   = string
+  }))
+  default = []
+}
+
+variable "sql_enable_private_endpoint" {
+  description = "Habilitar private endpoint para SQL Server"
+  type        = bool
+  default     = false
+}
+
+variable "sql_subnet_id" {
+  description = "ID da subnet para private endpoint do SQL"
+  type        = string
+  default     = null
+}

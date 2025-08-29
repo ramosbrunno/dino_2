@@ -78,3 +78,36 @@ module "databricks" {
 
   depends_on = [module.foundation]
 }
+
+# ========================
+# SQL Database Module (for Dino SDK Pipeline Logging)
+# ========================
+# Creates Azure SQL Database for storing Dino SDK pipeline logs
+
+module "sql_database" {
+  count  = var.enable_sql_database ? 1 : 0
+  source = "./modules/sql_database"
+
+  # Basic parameters
+  projeto   = var.projeto
+  ambiente  = var.ambiente
+
+  # Dependencies from foundation module
+  resource_group_name           = module.foundation.resource_group_name
+  key_vault_name               = module.foundation.key_vault_name
+
+  # Azure AD admin (usar service principal do foundation)
+  azuread_admin_login          = module.foundation.service_principal_display_name
+  azuread_admin_object_id      = module.foundation.service_principal_object_id
+
+  # SQL Database configurations
+  sql_admin_username           = var.sql_admin_username
+  sql_database_sku            = var.sql_database_sku
+  enable_public_access        = var.sql_enable_public_access
+  enable_azure_services_access = var.sql_enable_azure_services_access
+  sql_firewall_rules          = var.sql_firewall_rules
+  enable_private_endpoint     = var.sql_enable_private_endpoint
+  subnet_id                   = var.sql_subnet_id
+
+  depends_on = [module.foundation]
+}

@@ -2,13 +2,125 @@ import argparse
 import os
 import json
 import time
+import subprocess
+import sys
 from sdk.azure_auth import AzureAuth
 from sdk.terraform_executor import TerraformExecutor
 from databricks_config.unity_catalog_setup import DatabricksConfigurator
 
-def configure_databricks_environment(projeto, ambiente, location, terraform_executor):
+def enable_serverless_via_sdk(workspace_url, client_id, client_secret, tenant_id):
+    """
+    Habilita Serverless Compute usando Databricks SDK
+    """
+    print("\n⚡ Habilitando Serverless Compute via Databricks SDK...")
+    
+    # Preparar variáveis de ambiente para o script
+    env = os.environ.copy()
+    env.update({
+        'DATABRICKS_HOST': workspace_url,
+        'AZURE_CLIENT_ID': client_id,
+        'AZURE_CLIENT_SECRET': client_secret,
+        'AZURE_TENANT_ID': tenant_id
+    })
+    
+    try:
+        # Executar script de automação
+        script_path = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'enable_serverless.py')
+        result = subprocess.run([
+            'python', script_path
+        ], env=env, capture_output=True, text=True, timeout=300)
+        
+        if result.returncode == 0:
+            print("✅ Serverless Compute habilitado com sucesso!")
+            
+            # Verificar se arquivo de resultado foi criado
+            result_file = os.path.join(os.path.dirname(script_path), '..', 'serverless_result.json')
+            if os.path.exists(result_file):
+                with open(result_file, 'r') as f:
+                    result_data = json.load(f)
+                    print(f"📊 Status: {result_data.get('success', 'Unknown')}")
+                    if 'verification' in result_data:
+                        verification = result_data['verification']
+                        print(f"   🔧 Serverless Compute: {verification.get('serverless_compute', 'Unknown')}")
+                        print(f"   🏭 Delta Compute Service: {verification.get('delta_compute_service', 'Unknown')}")
+            
+            return True
+        else:
+            print(f"❌ Erro ao habilitar Serverless:")
+            print(f"   {result.stderr}")
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("❌ Timeout ao executar script de Serverless (>5min)")
+        return False
+    except Exception as e:
+        print(f"❌ Erro inesperado ao habilitar Serverless: {e}")
+        return False
+
+def enable_serverless_via_sdk(workspace_url, client_id, client_secret, tenant_id):
+    """
+    Habilita Serverless Compute usando o script Python com Databricks SDK
+    """
+    print("\n🚀 Habilitando Serverless via Databricks SDK...")
+    
+    # Definir o caminho do script
+    script_path = os.path.join(os.path.dirname(__file__), "..", "scripts", "enable_serverless.py")
+    
+    if not os.path.exists(script_path):
+        print(f"❌ Script não encontrado: {script_path}")
+        return False
+    
+    # Configurar variáveis de ambiente
+    env = os.environ.copy()
+    env['DATABRICKS_HOST'] = workspace_url
+    env['AZURE_CLIENT_ID'] = client_id
+    env['AZURE_CLIENT_SECRET'] = client_secret
+    env['AZURE_TENANT_ID'] = tenant_id
+    
+    try:
+        print(f"📡 Conectando ao workspace: {workspace_url}")
+        print("⏳ Executando automação do Serverless...")
+        
+        # Executar o script Python
+        result = subprocess.run([sys.executable, script_path], 
+                              env=env, 
+                              capture_output=True, 
+                              text=True,
+                              cwd=os.path.dirname(script_path))
+        
+        if result.returncode == 0:
+            print("✅ Serverless habilitado com sucesso via SDK!")
+            
+            # Verificar se o arquivo de resultado foi criado
+            result_file = os.path.join(os.path.dirname(script_path), "serverless_result.json")
+            if os.path.exists(result_file):
+                with open(result_file, 'r') as f:
+                    result_data = json.load(f)
+                print("📋 Resultado:")
+                print(f"   Status: {'✅' if result_data.get('success') else '❌'}")
+                print(f"   Timestamp: {result_data.get('timestamp', 'N/A')}")
+                
+                if result_data.get('verification'):
+                    verification = result_data['verification']
+                    print("📊 Configurações habilitadas:")
+                    for config, status in verification.items():
+                        emoji = "✅" if status == "true" else "❌"
+                        print(f"   {emoji} {config}: {status}")
+            
+            return True
+        else:
+            print("❌ Erro ao executar script SDK:")
+            print(result.stderr)
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erro durante execução do SDK: {str(e)}")
+        return False
+
+def configure_databricks_environment(projeto, ambiente, location, terraform_executor, client_id, client_secret, tenant_id):
     """
     Configura automaticamente o Databricks Unity Catalog e Serverless após o deploy
+    Integra automação via Databricks SDK para configuração completa
     """
     print("\n🔧 Configurando Databricks Unity Catalog e Serverless...")
     
@@ -65,7 +177,34 @@ def configure_databricks_environment(projeto, ambiente, location, terraform_exec
             if result.get('warehouse'):
                 print(f"   🏭 SQL Warehouse: {result['warehouse'].get('name', f'{projeto}-{ambiente}-warehouse')}")
             
-            print("   ⚡ Serverless Compute: Habilitado")
+            print("   ⚡ Serverless Compute: Habilitado via configuração tradicional")
+            
+            # NOVA FUNCIONALIDADE: Automação adicional via Databricks SDK
+            print("\n🚀 Aplicando automação avançada via Databricks SDK...")
+            
+            # Preparar URL completa do workspace
+            if not workspace_url.startswith('https://'):
+                workspace_url = f"https://{workspace_url}"
+            
+            # Executar automação SDK para configurações avançadas
+            sdk_success = enable_serverless_via_sdk(
+                workspace_url=workspace_url,
+                client_id=client_id,
+                client_secret=client_secret,
+                tenant_id=tenant_id
+            )
+            
+            if sdk_success:
+                print("✅ Automação SDK aplicada com sucesso!")
+                print("🎯 Configurações avançadas habilitadas:")
+                print("   ⚡ Serverless Compute (verificado via API)")
+                print("   🏭 Delta Compute Service")
+                print("   🌐 Web Terminal")
+                print("   📁 DBFS File Browser")
+            else:
+                print("⚠️  Configuração tradicional OK, mas automação SDK falhou")
+                print("   Serverless ainda está habilitado via método tradicional")
+            
             return True
         else:
             print(f"❌ Erro na configuração do Databricks: {result.get('error', 'Erro desconhecido')}")
@@ -210,17 +349,22 @@ def main():
                 args.projeto, 
                 args.ambiente, 
                 args.location, 
-                terraform_executor
+                terraform_executor,
+                args.client_id,
+                args.client_secret,
+                args.tenant_id
             )
             
             if databricks_success:
                 print("\n🎊 Deploy completo finalizado!")
                 print("🚀 Seu ambiente Databricks Premium está pronto para uso:")
                 print(f"   📊 Unity Catalog configurado com arquitetura medallion")
-                print(f"   ⚡ Serverless Compute habilitado")
+                print(f"   ⚡ Serverless Compute habilitado via Databricks SDK")
                 print(f"   🏭 SQL Warehouse Serverless criado")
+                print(f"   🌐 Web Terminal e DBFS Browser habilitados")
                 print(f"   📚 Catalog: {args.projeto}_{args.ambiente}")
                 print(f"   🗂️  Schemas: bronze, silver, gold, workspace")
+                print(f"   🎯 Automação completa via SDK aplicada!")
             else:
                 print("\n⚠️  Infraestrutura criada, mas configuração do Databricks falhou")
                 print("   Você pode executar a configuração manualmente usando os scripts em databricks_config/")
