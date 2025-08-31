@@ -1,325 +1,497 @@
-# DINO ARC v2.0.0
+# 🦕 DINO ARC - Data Infrastructure and Operations Automation & Resource Configuration
 
-Ferramenta CLI para criação automatizada de infraestrutura Azure com Databricks Premium, Unity Catalog e Serverless Computing usando autenticação Service Principal (SPN) via Terraform.
+**Ferramenta CLI completa para automação de infraestrutura Azure com Databricks Premium, Unity Catalog e Serverless Compute.**
 
-## ⚡ Setup Rápido
+## 📋 **Índice**
 
-### Opção 1: Setup Automático (Recomendado)
-```bash
-# Execute o script de setup que instala tudo automaticamente
-setup-env.bat
+- [🎯 Visão Geral](#-visão-geral)
+- [⚡ Quick Start](#-quick-start)
+- [🔧 Configuração do Ambiente](#-configuração-do-ambiente)
+- [📦 Instalação de Dependências](#-instalação-de-dependências)
+- [🚀 Uso da Ferramenta](#-uso-da-ferramenta)
+- [🔐 Configuração do Serverless](#-configuração-do-serverless)
+- [📊 Componentes Criados](#-componentes-criados)
+- [🔍 Troubleshooting](#-troubleshooting)
+- [📖 Documentação Detalhada](#-documentação-detalhada)
+
+---
+
+## 🎯 **Visão Geral**
+
+O **DINO ARC** é uma ferramenta CLI que automatiza completamente a criação e configuração de infraestrutura Azure para projetos de dados, incluindo:
+
+- ✅ **Azure Resource Group** com configurações optimizadas
+- ✅ **Azure Key Vault** para gestão segura de secrets
+- ✅ **Service Principal** com permissões adequadas
+- ✅ **Azure SQL Database** com configurações de performance
+- ✅ **Databricks Premium** com Unity Catalog
+- ✅ **Serverless Compute** para workflows, notebooks e pipelines
+- ✅ **SQL Warehouse Serverless** para analytics
+- ✅ **Arquitetura Medallion** (Bronze, Silver, Gold, Workspace)
+
+### 🌟 **Características Principais**
+
+- 🔄 **Terraform**: Infraestrutura como código
+- 🔐 **Service Principal**: Autenticação segura
+- 📊 **Unity Catalog**: Governança de dados
+- ⚡ **Serverless**: Compute otimizado e econômico
+- 🎯 **East US 2**: Região otimizada
+- 🔒 **Sem Soft Delete**: Recursos limpos
+- 📋 **Logging Detalhado**: Diagnósticos completos
+
+---
+
+## ⚡ **Quick Start**
+
+### Comando Rápido de Apply
+```cmd
+cd "c:\caminho\para\dino_2\dino_arc" && python -m src.cli --client-id SEU_CLIENT_ID --client-secret SEU_CLIENT_SECRET --tenant_id SEU_TENANT_ID --subscription-id SEU_SUBSCRIPTION_ID --action apply --projeto data-master --location "East US 2"
 ```
 
-### Opção 2: Setup Manual
+### Comando Rápido de Destroy
+```cmd
+cd "c:\caminho\para\dino_2\dino_arc" && python -m src.cli --client-id SEU_CLIENT_ID --client-secret SEU_CLIENT_SECRET --tenant_id SEU_TENANT_ID --subscription-id SEU_SUBSCRIPTION_ID --action destroy --projeto data-master --location "East US 2"
+```
 
-#### 1. Criar Ambiente Virtual
-```bash
+---
+
+## 🔧 **Configuração do Ambiente**
+
+### **1. Pré-requisitos**
+
+#### 🐍 **Python 3.8+**
+```cmd
+python --version
+# Deve retornar Python 3.8 ou superior
+```
+
+#### 🔧 **Terraform 1.0+**
+```cmd
+# Download do Terraform
+# https://www.terraform.io/downloads.html
+terraform --version
+# Deve retornar Terraform v1.0 ou superior
+```
+
+#### ☁️ **Azure CLI**
+```cmd
+# Download do Azure CLI
+# https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
+az --version
+# Deve retornar versão do Azure CLI
+```
+
+### **2. Clonagem do Repositório**
+```cmd
+git clone https://github.com/ramosbrunno/dino_2.git
+cd dino_2/dino_arc
+```
+
+### **3. Configuração do Service Principal**
+
+#### 🔐 **Criar Service Principal**
+```cmd
+az login
+az ad sp create-for-rbac --name "data-master-spn" --role="Contributor" --scopes="/subscriptions/SEU_SUBSCRIPTION_ID"
+```
+
+#### 📋 **Obter Informações**
+Anote as seguintes informações retornadas:
+- `appId` = **client_id**
+- `password` = **client_secret**
+- `tenant` = **tenant_id**
+- `subscription_id` = **subscription_id**
+
+#### ⚙️ **Permissões Adicionais**
+```cmd
+# Permissão para Key Vault
+az role assignment create --assignee SEU_CLIENT_ID --role "Key Vault Administrator" --scope "/subscriptions/SEU_SUBSCRIPTION_ID"
+
+# Permissão para SQL Server
+az role assignment create --assignee SEU_CLIENT_ID --role "SQL Server Contributor" --scope "/subscriptions/SEU_SUBSCRIPTION_ID"
+```
+
+---
+
+## 📦 **Instalação de Dependências**
+
+### **1. Ambiente Virtual (Recomendado)**
+```cmd
 # Criar ambiente virtual
 python -m venv dino_env
 
-# Ativar ambiente virtual (Windows)
+# Ativar ambiente virtual
+# Windows:
 dino_env\Scripts\activate
-```
-
-#### 2. Instalar DINO ARC
-```bash
-# Instalar em modo desenvolvimento
-pip install -e .
-```
-
-#### 3. Instalar Terraform
-
-O Terraform é obrigatório para funcionamento do DINO ARC. Escolha uma das opções abaixo:
-
-**Opção A: Windows com winget (Recomendado para Windows 10/11)**
-```bash
-winget install HashiCorp.Terraform
-```
-
-**Opção B: Windows com Chocolatey**
-```bash
-# Instalar Chocolatey primeiro (se não tiver)
-# https://chocolatey.org/install
-
-# Instalar Terraform
-choco install terraform
-```
-
-**Opção C: Download Manual (Funciona em qualquer sistema)**
-```bash
-# 1. Baixar o Terraform do site oficial
-# https://www.terraform.io/downloads.html
-
-# 2. Extrair o arquivo baixado
-# 3. Colocar o executável terraform.exe em uma pasta no PATH
-# 4. Ou criar uma pasta local (exemplo: C:\terraform) e adicionar ao PATH
-```
-
-**Opção D: PowerShell Download Automático (Windows)**
-```powershell
-# Criar pasta para o Terraform
-mkdir C:\terraform
-cd C:\terraform
-
-# Baixar e extrair
-Invoke-WebRequest -Uri "https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_windows_amd64.zip" -OutFile "terraform.zip"
-Expand-Archive -Path "terraform.zip" -DestinationPath "C:\terraform"
-Remove-Item "terraform.zip"
-
-# Adicionar ao PATH (permanente)
-$env:PATH += ";C:\terraform"
-[Environment]::SetEnvironmentVariable("PATH", $env:PATH, [EnvironmentVariableTarget]::User)
-```
-
-**⚡ Script Automático para Terraform (Se tiver problemas)**
-```bash
-# Execute este script que tenta vários métodos de instalação
-install-terraform.bat
-```
-
-**📋 Verificar Instalação do Terraform**
-```bash
-# Abra um novo terminal e teste
-terraform version
-
-# Deve retornar algo como:
-# Terraform v1.6.6
-```
-
-**⚠️ Importante:** 
-- Após instalar via winget ou chocolatey, **reinicie o terminal** ou abra um novo
-- Se ainda não funcionar, reinicie o computador para atualizar o PATH
-- Para verificar se está no PATH: `echo $env:PATH` (PowerShell) ou `echo %PATH%` (CMD)
-
-#### 4. Verificar Instalação
-```bash
-# Testar DINO ARC
-dino_arc --help
-
-# Verificar Terraform
-terraform version
-```
-
-## 🚀 Uso
-
-### Autenticação via Service Principal
-
-Você precisa dos seguintes parâmetros do Azure:
-- **Client ID**: ID do Service Principal
-- **Client Secret**: Secret do Service Principal  
-- **Tenant ID**: ID do Tenant Azure
-- **Subscription ID**: ID da Subscription Azure
-
-### Criar Infraestrutura Completa
-
-**⚠️ IMPORTANTE - Segurança das Credenciais:**
-- **NUNCA** commite credenciais reais no código
-- Use variáveis de ambiente para produção
-- Mantenha secrets seguros no Azure Key Vault
-- Revogue credenciais se expostas acidentalmente
-
-```bash
-dino_arc \
-  --client-id "your-client-id" \
-  --client-secret "your-client-secret" \
-  --tenant-id "your-tenant-id" \
-  --subscription-id "your-subscription-id" \
-  --action apply \
-  --projeto dino \
-  --ambiente dev
-```
-
-### Usar Variáveis de Ambiente (Recomendado para Produção)
-
-Para maior segurança, configure as credenciais como variáveis de ambiente:
-
-```bash
-# Configurar variáveis (Windows CMD)
-set ARM_CLIENT_ID=your-client-id
-set ARM_CLIENT_SECRET=your-client-secret
-set ARM_TENANT_ID=your-tenant-id
-set ARM_SUBSCRIPTION_ID=your-subscription-id
-
-# Executar sem expor credenciais na linha de comando
-dino_arc --action apply --projeto meuapp --ambiente prod
-```
-
-```powershell
-# Configurar variáveis (PowerShell)
-$env:ARM_CLIENT_ID="your-client-id"
-$env:ARM_CLIENT_SECRET="your-client-secret"
-$env:ARM_TENANT_ID="your-tenant-id"
-$env:ARM_SUBSCRIPTION_ID="your-subscription-id"
-
-# Executar
-dino_arc --action apply --projeto meuapp --ambiente prod
-```
-
-### Exemplo com Parâmetros Fictícios
-```bash
-dino_arc \
-  --client-id "12345678-1234-1234-1234-123456789012" \
-  --client-secret "ExEmPlO~SeCrEt1234567890abcdefghij" \
-  --tenant-id "87654321-4321-4321-4321-210987654321" \
-  --subscription-id "11111111-2222-3333-4444-555555555555" \
-  --action apply \
-  --projeto meuapp \
-  --ambiente dev
-```
-
-## 🎯 Recursos Criados
-
-O DINO ARC cria automaticamente:
-
-- ✅ **Resource Group**: `{projeto}-{ambiente}-rsg`
-- ✅ **Key Vault**: Para armazenamento seguro de secrets
-- ✅ **Service Principal**: Para autenticação automatizada
-- ✅ **Azure SQL Database**: Para logs e metadados
-- ✅ **Databricks Workspace Premium**: Com todas as funcionalidades
-- ✅ **Unity Catalog**: Metastore e catálogos configurados
-- ✅ **Serverless Computing**: Habilitado automaticamente
-
-## 🔧 Parâmetros
-
-| Parâmetro | Descrição | Obrigatório | Padrão |
-|-----------|-----------|-------------|---------|
-| `--client-id` | Azure Service Principal Client ID | ✅ | - |
-| `--client-secret` | Azure Service Principal Client Secret | ✅ | - |
-| `--tenant-id` | Azure Tenant ID | ✅ | - |
-| `--subscription-id` | Azure Subscription ID | ✅ | - |
-| `--action` | Ação a executar (apply) | ✅ | - |
-| `--projeto` | Nome do projeto | ✅ | - |
-| `--ambiente` | Ambiente (dev/prod) | ✅ | - |
-| `--location` | Região Azure | ❌ | East US 2 |
-
-## 📋 Pré-requisitos
-
-### Obrigatórios
-- **Python 3.8+**: Para executar o DINO ARC
-- **Terraform 1.0+**: Para provisionar a infraestrutura Azure
-- **Service Principal Azure**: Com permissões adequadas na subscription
-- **Acesso à Azure Subscription**: Para criar recursos
-
-### Verificar Pré-requisitos
-```bash
-# Verificar Python
-python --version
-
-# Verificar Terraform (OBRIGATÓRIO)
-terraform version
-
-# Se algum comando falhar, instale seguindo as instruções acima
-```
-
-### Permissões do Service Principal
-O Service Principal precisa das seguintes permissões na subscription:
-- `Contributor`: Para criar e gerenciar recursos
-- `User Access Administrator`: Para atribuir permissões ao Databricks
-- `Storage Blob Data Contributor`: Para Unity Catalog
-
-## � Troubleshooting
-
-### ❌ "terraform não é reconhecido como comando"
-
-**Problema**: Terraform foi instalado mas não está no PATH
-
-**Soluções**:
-```bash
-# 1. Reinicie o terminal/prompt de comando
-# 2. Ou reinicie o computador
-# 3. Ou execute o script automático:
-install-terraform.bat
-
-# 4. Verificar se está instalado:
-where terraform
-
-# 5. Se instalou via winget/choco, aguarde alguns minutos e tente novamente
-```
-
-### ❌ "winget install falhou"
-
-**Problema**: winget não conseguiu instalar o Terraform
-
-**Soluções**:
-```bash
-# Use o script que tenta múltiplos métodos:
-install-terraform.bat
-
-# Ou instale manualmente:
-# 1. Baixe de: https://www.terraform.io/downloads.html
-# 2. Extraia em C:\terraform
-# 3. Adicione C:\terraform ao PATH
-```
-
-### ❌ "pip install -e . falhou"
-
-**Problema**: Erro na instalação do pacote Python
-
-**Soluções**:
-```bash
-# 1. Certifique-se que está no ambiente virtual
-dino_env\Scripts\activate
-
-# 2. Atualize pip
-python -m pip install --upgrade pip
-
-# 3. Instale novamente
-pip install -e .
-```
-
-### ❌ "Service Principal sem permissões"
-
-**Problema**: Erros de autorização ao criar recursos
-
-**Soluções**:
-- Verifique se o SPN tem role `Contributor` na subscription
-- Adicione role `User Access Administrator` para Databricks
-- Consulte a documentação Azure sobre Service Principals
-
-## �🔐 Segurança
-
-- Autenticação via Service Principal (SPN)
-- Secrets mascarados no output
-- Variáveis de ambiente seguras para Terraform
-- Key Vault para armazenamento de credenciais
-  --action destroy \
-  --projeto myapp \
-  --ambiente dev
-```
-
-### Ajuda
-```bash
-dino_arc --help
-```
-
-## O Que É Criado
-
-- Resource Group do Azure
-- Azure Key Vault
-- Service Principal
-- Azure SQL Database
-- Databricks Premium Workspace
-- Unity Catalog com Metastore
-- Serverless Computing (habilitado automaticamente)
-
-## Requisitos
-
-- Python 3.8+
-- Azure CLI configurado
-- Credenciais de Service Principal do Azure
-
-## Gerenciamento do Ambiente
-
-### Desativar Ambiente Virtual
-```bash
-deactivate
-```
-
-### Reativar Ambiente Virtual (sessões futuras)
-```bash
-# No Windows:
-dino_env\Scripts\activate
-
-# No Linux/Mac:
+# Linux/Mac:
 source dino_env/bin/activate
 ```
+
+### **2. Instalar Dependências Python**
+```cmd
+# Instalar dependências básicas
+pip install -r requirements.txt
+
+# Instalar Databricks SDK (obrigatório para Serverless)
+pip install databricks-sdk
+
+# Instalar dependências de desenvolvimento (opcional)
+pip install -e .
+```
+
+### **3. Verificar Instalação**
+```cmd
+# Verificar se todas as dependências foram instaladas
+python -c "import databricks.sdk; print('✅ Databricks SDK instalado')"
+python -c "import azure.identity; print('✅ Azure Identity instalado')"
+python -c "import terraform; print('✅ Terraform disponível')" 2>/dev/null || echo "⚠️ Terraform CLI necessário"
+```
+
+---
+
+## 🚀 **Uso da Ferramenta**
+
+### **1. Sintaxe Básica**
+```cmd
+python -m src.cli [OPÇÕES]
+```
+
+### **2. Parâmetros Obrigatórios**
+- `--client-id`: Service Principal Client ID
+- `--client-secret`: Service Principal Client Secret  
+- `--tenant_id`: Azure Tenant ID
+- `--subscription-id`: Azure Subscription ID
+- `--action`: Ação a executar (`apply` ou `destroy`)
+- `--projeto`: Nome do projeto
+- `--location`: Região Azure (`"East US 2"`)
+
+### **3. Exemplo Completo - Apply**
+```cmd
+cd "c:\Users\User\OneDrive\Documentos\Projetos\Data_Master_2025\GIT\dino_2\dino_arc"
+
+python -m src.cli \
+  --client-id Service Principal Client ID \
+  --client-secret Service Principal Client Secret \
+  --tenant_id Azure Tenant ID \
+  --subscription-id Azure Subscription ID \
+  --action apply \
+  --projeto data-master \
+  --location "East US 2"
+```
+
+### **4. Exemplo Completo - Destroy**
+```cmd
+python -m src.cli \
+  --client-id Service Principal Client ID \
+  --client-secret Service Principal Client Secret \
+  --tenant_id Azure Tenant ID \
+  --subscription-id Azure Subscription ID \
+  --action destroy \
+  --projeto data-master \
+  --location "East US 2"
+```
+
+---
+
+## 🔐 **Configuração do Serverless**
+
+### **🎯 Habilitação Automática vs Manual**
+
+O DINO ARC tentará habilitar automaticamente o **"Serverless compute for workflows, notebooks, and Lakeflow Declarative Pipelines"**, mas se a habilitação automática falhar, siga os passos manuais abaixo.
+
+### **📋 Passo a Passo Manual (Baseado na Documentação Microsoft)**
+
+#### **1. Acesso ao Databricks Account Console**
+```
+🌐 URL: https://accounts.azuredatabricks.net
+🔐 Login: Use as credenciais do Service Principal ou conta administrativa
+```
+
+#### **2. Navegação para Feature Enablement**
+```
+⚙️ Settings → Feature enablement
+```
+
+#### **3. Habilitar Serverless Compute**
+Marque as seguintes opções:
+- ✅ **Serverless compute for workflows, notebooks, and Lakeflow Declarative Pipelines**
+- ✅ **Unity Catalog** (se ainda não habilitado)
+- ✅ **Enhanced security monitoring** (opcional mas recomendado)
+
+#### **4. Configurações Account-Level**
+```
+📝 Navegue para: Settings → Account settings → Workspace settings
+✅ Habilite: "Allow serverless compute"
+✅ Habilite: "Enable serverless SQL warehouses"
+```
+
+#### **5. Configurações de Rede (se necessário)**
+```
+🌐 Navegue para: Settings → Network → Serverless
+✅ Configure: "Enable serverless compute networking"
+⚠️ Nota: O DINO ARC não configura redes customizadas - usa defaults seguros
+```
+
+#### **6. Tempo de Propagação**
+```
+⏳ Aguarde: 5-10 minutos para propagação das configurações
+🔄 Verifique: Execute novamente o comando apply para validar
+```
+
+### **🔍 Verificação de Status**
+
+#### **Via CLI do DINO ARC**
+```cmd
+# O comando apply mostrará o status do serverless
+python -m src.cli ... --action apply
+```
+
+#### **Via Databricks Workspace**
+```
+🌐 Acesse: Seu workspace Databricks
+⚙️ Settings → Admin Console → Workspace settings
+🔍 Verifique: "Serverless compute" deve estar "Enabled"
+```
+
+### **📊 Logs Detalhados**
+
+O DINO ARC cria logs detalhados em:
+```
+📁 logs/serverless_enablement_[timestamp].log
+```
+
+Este arquivo contém:
+- 🔍 **Stacktraces completos** de erros
+- 📝 **APIs tentadas** e suas respostas  
+- 🔐 **Fluxo de autenticação** detalhado
+- ⚙️ **Configurações aplicadas** e falhadas
+
+### **🚨 Troubleshooting Serverless**
+
+#### **Problema: "Databricks SDK não disponível"**
+```cmd
+# Solução: Instalar o SDK
+pip install databricks-sdk
+```
+
+#### **Problema: "Account-level APIs requerem account_id"**
+```
+✅ Solução: Configuração manual via Account Console (passos acima)
+```
+
+#### **Problema: "WorkspaceConfAPI.set_status() argumentos incorretos"**
+```
+✅ Solução: O DINO ARC tenta múltiplas assinaturas automaticamente
+📋 Verifique: logs/ para detalhes técnicos
+```
+
+#### **Problema: "Serverless não habilitado após configuração"**
+```
+⏳ Aguarde: 5-10 minutos para propagação
+🔄 Execute: comando apply novamente
+📞 Contate: Suporte Databricks se persistir
+```
+
+---
+
+## 📊 **Componentes Criados**
+
+### **🏗️ Infraestrutura Base**
+- **Resource Group**: `{projeto}-{ambiente}-rsg`
+- **Key Vault**: `{projeto}-{ambiente}-akv-[random]`
+- **Service Principal**: `{projeto}-{ambiente}-spn`
+
+### **🧮 Databricks Premium**
+- **Workspace**: `{projeto}-{ambiente}-dbw-[random]`
+- **Pricing Tier**: Premium (necessário para Unity Catalog)
+- **Region**: East US 2
+- **Network**: Default (otimizado para Serverless)
+
+### **📊 Unity Catalog**
+- **Metastore**: `{projeto}-{ambiente}-metastore`
+- **Storage Account**: `{projeto}{ambiente}ucsa[random]`
+- **Catalog**: `{projeto}_{ambiente}`
+
+### **🗂️ Schemas (Arquitetura Medallion)**
+- **Bronze**: `{projeto}_{ambiente}.bronze`
+- **Silver**: `{projeto}_{ambiente}.silver`  
+- **Gold**: `{projeto}_{ambiente}.gold`
+- **Workspace**: `{projeto}_{ambiente}.workspace`
+
+### **🏭 SQL Warehouse**
+- **Nome**: `{projeto}-{ambiente}-warehouse`
+- **Tipo**: Serverless
+- **Size**: X-Small (escalável automaticamente)
+- **Auto-stop**: 10 minutos
+
+### **⚡ Serverless Compute**
+- **Workflows**: Habilitado para Jobs
+- **Notebooks**: Habilitado para desenvolvimento
+- **Pipelines**: Habilitado para Lakeflow Declarative Pipelines
+- **Policies**: Política customizada para Serverless
+
+---
+
+## 🔍 **Troubleshooting**
+
+### **🚨 Problemas Comuns**
+
+#### **1. Erro de Autenticação**
+```
+❌ Erro: "Authentication failed"
+✅ Solução:
+   1. Verificar client_id, client_secret, tenant_id
+   2. Verificar permissões do Service Principal
+   3. Executar: az login para testar credenciais
+```
+
+#### **2. Terraform Não Encontrado**
+```
+❌ Erro: "terraform not found"
+✅ Solução:
+   1. Instalar Terraform: https://www.terraform.io/downloads.html
+   2. Adicionar ao PATH do sistema
+   3. Verificar: terraform --version
+```
+
+#### **3. Dependências Python**
+```
+❌ Erro: "Module not found"
+✅ Solução:
+   1. Ativar ambiente virtual: dino_env\Scripts\activate
+   2. Instalar dependências: pip install -r requirements.txt
+   3. Instalar Databricks SDK: pip install databricks-sdk
+```
+
+#### **4. Permissões Insuficientes**
+```
+❌ Erro: "Insufficient privileges"
+✅ Solução:
+   1. Verificar papel do Service Principal: Contributor
+   2. Adicionar permissões específicas (ver seção Configuração)
+   3. Aguardar propagação das permissões (até 10 minutos)
+```
+
+#### **5. Recursos Já Existem**
+```
+❌ Erro: "Resource already exists"
+✅ Solução:
+   1. Executar destroy primeiro: --action destroy
+   2. Aguardar conclusão completa
+   3. Executar apply novamente: --action apply
+```
+
+### **📋 Logs e Diagnósticos**
+
+#### **Localização dos Logs**
+```
+📁 logs/serverless_enablement_[timestamp].log - Logs de Serverless
+📁 terraform/ - Estados do Terraform
+📁 dino_env/ - Ambiente virtual Python
+```
+
+#### **Comandos de Diagnóstico**
+```cmd
+# Verificar versões
+python --version
+terraform --version
+az --version
+
+# Verificar dependências Python
+pip list | findstr databricks
+pip list | findstr azure
+
+# Verificar autenticação Azure
+az account show
+
+# Verificar estado do Terraform
+cd terraform && terraform show
+```
+
+---
+
+## 📖 **Documentação Detalhada**
+
+### **🔗 Links Úteis**
+
+- **[Microsoft Databricks Serverless](https://docs.microsoft.com/en-us/azure/databricks/serverless-compute/)**
+- **[Unity Catalog Documentation](https://docs.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/)**
+- **[Terraform Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)**
+- **[Azure CLI Reference](https://docs.microsoft.com/en-us/cli/azure/reference-index)**
+
+### **📁 Estrutura do Projeto**
+```
+dino_arc/
+├── src/
+│   ├── cli.py                      # CLI principal
+│   ├── sdk/
+│   │   └── azure_auth.py          # Autenticação Azure
+│   ├── databricks_config/
+│   │   ├── unity_catalog_setup.py # Configuração Unity Catalog
+│   │   └── enable_serverless.py   # Habilitação Serverless
+│   └── terraform/
+│       └── terraform_manager.py   # Gerenciamento Terraform
+├── terraform/
+│   ├── foundation/                 # Infraestrutura base
+│   ├── databricks/                # Databricks Premium
+│   └── sql_database/              # Azure SQL Database
+├── logs/                          # Logs detalhados
+├── requirements.txt               # Dependências Python
+├── setup.py                      # Configuração do pacote
+└── README.md                     # Este arquivo
+```
+
+### **🎯 Casos de Uso**
+
+#### **1. Desenvolvimento Local**
+```cmd
+# Criar ambiente de desenvolvimento
+python -m src.cli --action apply --projeto dev-local --location "East US 2" [credenciais]
+```
+
+#### **2. Ambiente de Produção**
+```cmd
+# Criar ambiente de produção
+python -m src.cli --action apply --projeto prod-data --location "East US 2" [credenciais]
+```
+
+#### **3. Limpeza Completa**
+```cmd
+# Remover todos os recursos
+python -m src.cli --action destroy --projeto nome-projeto --location "East US 2" [credenciais]
+```
+
+---
+
+## 📞 **Suporte e Contribuição**
+
+### **🐛 Reportar Problemas**
+1. Verificar logs em `logs/`
+2. Executar comandos de diagnóstico
+3. Abrir issue no repositório com:
+   - Comando executado
+   - Log de erro completo
+   - Versões das ferramentas
+
+### **🤝 Contribuir**
+1. Fork do repositório
+2. Criar branch feature
+3. Commit das mudanças
+4. Abrir Pull Request
+
+### **📄 Licença**
+Este projeto está sob licença MIT - veja o arquivo LICENSE para detalhes.
+
+---
+
+## 🎉 **Conclusão**
+
+O **DINO ARC** fornece uma solução completa e automatizada para criação de infraestrutura Azure com Databricks Premium e Serverless Compute. Com este README, você tem todas as informações necessárias para:
+
+✅ **Configurar** o ambiente corretamente  
+✅ **Executar** os comandos com segurança  
+✅ **Habilitar** Serverless Compute automaticamente ou manualmente  
+✅ **Diagnosticar** e resolver problemas  
+✅ **Manter** a infraestrutura de forma eficiente  
+
+🚀 **Happy Data Engineering!** 🚀
