@@ -14,28 +14,26 @@ terraform {
   }
 }
 
-# Generate random suffix for globally unique names
-resource "random_string" "databricks_suffix" {
-  length  = 6
+# Generate random string for Unity Catalog storage naming
+resource "random_string" "unique_suffix" {
+  length  = 4
   special = false
   upper   = false
-}
-
-# Generate random token for Databricks API (simulated for configuration)
-resource "random_password" "databricks_token" {
-  length  = 32
-  special = false
-  upper   = true
-  lower   = true
+  lower   = false
   numeric = true
 }
 
+# Get current client config
+data "azurerm_client_config" "current" {}
+
 # Local values for resource naming and configuration
 locals {
-  # Nomenclatura padrão: projeto-ambiente-sufixo
-  databricks_workspace_name = "${var.projeto}-${var.ambiente}-dbw-${random_string.databricks_suffix.result}"
-  storage_account_name      = "${replace(var.projeto, "-", "")}${var.ambiente}dbwsa${random_string.databricks_suffix.result}"
-  unity_catalog_storage     = "${replace(var.projeto, "-", "")}${var.ambiente}ucsa${random_string.databricks_suffix.result}"
+  # Nomenclatura descritiva: projeto-ambiente-tipo-funcionalidade
+  databricks_workspace_name = "${var.projeto}-${var.ambiente}-dbw"
+  
+  # Apenas Unity Catalog storage (DBFS será criado automaticamente pelo Azure)
+  projeto_clean = replace(var.projeto, "-", "")
+  unity_catalog_storage     = "${local.projeto_clean}${var.ambiente}sauc${random_string.unique_suffix.result}"
   
   # Tags padrão para o módulo Databricks
   default_tags = {
@@ -53,34 +51,7 @@ locals {
 }
 
 # ========================
-# Storage Account for Databricks (DBFS Root)
-# ========================
-
-resource "azurerm_storage_account" "databricks" {
-  name                     = local.storage_account_name
-  resource_group_name      = var.resource_group_name
-  location                = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  
-  # Configurações de segurança
-  allow_nested_items_to_be_public = false
-  shared_access_key_enabled       = true
-  
-  # Habilitar recursos avançados para Databricks Premium
-  is_hns_enabled = true  # Hierarchical Namespace para Data Lake Gen2
-  
-  # Network rules - Permitir acesso à internet para Serverless
-  network_rules {
-    default_action = "Allow"
-    bypass         = ["AzureServices"]
-  }
-
-  tags = local.final_tags
-}
-
-# ========================
-# Storage Account for Unity Catalog
+# Storage Account for Unity Catalog (apenas)
 # ========================
 
 resource "azurerm_storage_account" "unity_catalog" {
@@ -124,14 +95,11 @@ resource "azurerm_databricks_workspace" "main" {
   sku                 = "premium"  # Always Premium for Unity Catalog
 
   # Configurações de rede para acesso à internet e Serverless
-  public_network_access_enabled         = true   # Permitir acesso à internet
-  network_security_group_rules_required = "NoAzureDatabricksRules"
+  public_network_access_enabled = true   # Permitir acesso à internet
   
-  # Configurações customizadas para Premium
+  # Configurações customizadas para Premium - SEM storage account customizado
   custom_parameters {
     no_public_ip                                         = false  # Permitir IP público para Serverless
-    storage_account_name                                = azurerm_storage_account.databricks.name
-    storage_account_sku_name                            = "Standard_LRS"
     virtual_network_id                                  = null    # Sem VNet customizada para simplicidade
     public_subnet_name                                  = null
     private_subnet_name                                 = null
@@ -141,8 +109,21 @@ resource "azurerm_databricks_workspace" "main" {
 
   tags = local.final_tags
 
-  depends_on = [azurerm_storage_account.databricks, azurerm_storage_account.unity_catalog]
+  depends_on = [azurerm_storage_account.unity_catalog]
 }
+
+# ========================
+# Configuração Pós-Criação
+# ========================
+
+# NOTA: As configurações do Unity Catalog, serverless e usuários administradores
+# serão feitas em uma segunda fase usando o provider databricks após a criação
+# do workspace, para evitar dependências circulares.
+#
+# Configurações pendentes:
+# 1. Unity Catalog metastore: ${var.projeto}-metastore
+# 2. Serverless computing habilitado
+# 3. Usuários admin: brunno.ramos_live.com#EXT#@brunnoramoslive.onmicrosoft.com, brunno.ramos@brunnoramoslive.onmicrosoft.com
 
 # ========================
 # Key Vault Secrets for Databricks (Always Store)
@@ -219,14 +200,6 @@ resource "azurerm_role_assignment" "spn_databricks_contributor" {
 # Grant Service Principal Storage Blob Data Contributor on Unity Catalog storage
 resource "azurerm_role_assignment" "spn_unity_catalog_storage" {
   scope                = azurerm_storage_account.unity_catalog.id
-  role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = var.service_principal_object_id
-  principal_type       = "ServicePrincipal"
-}
-
-# Grant Service Principal Storage Blob Data Contributor on Databricks storage
-resource "azurerm_role_assignment" "spn_databricks_storage" {
-  scope                = azurerm_storage_account.databricks.id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = var.service_principal_object_id
   principal_type       = "ServicePrincipal"

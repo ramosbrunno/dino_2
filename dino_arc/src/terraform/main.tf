@@ -24,16 +24,27 @@ provider "azurerm" {
   features {
     key_vault {
       purge_soft_delete_on_destroy    = true
-      recover_soft_deleted_key_vaults = true
+      recover_soft_deleted_key_vaults = false
+    }
+    
+    resource_group {
+      prevent_deletion_if_contains_resources = false
     }
   }
   
-  # Usar subscription_id se fornecida via variável
+  # Usar credenciais do Service Principal
   subscription_id = var.subscription_id
+  client_id       = var.client_id
+  client_secret   = var.client_secret
+  tenant_id       = var.tenant_id
 }
 
 # Configure the Azure AD Provider
-provider "azuread" {}
+provider "azuread" {
+  client_id     = var.client_id
+  client_secret = var.client_secret
+  tenant_id     = var.tenant_id
+}
 
 # ========================
 # Foundation Module
@@ -70,11 +81,29 @@ module "databricks" {
   key_vault_id                 = module.foundation.key_vault_id
   service_principal_object_id   = module.foundation.service_principal_object_id
 
-  # Databricks-specific configurations
-  databricks_sku               = var.databricks_sku
-  public_network_access_enabled = var.databricks_public_network_access
-  no_public_ip                 = var.databricks_no_public_ip
-  store_secrets_in_keyvault    = var.databricks_store_secrets
+  depends_on = [module.foundation]
+}
+
+# ========================
+# SQL Database Module (for Dino SDK Pipeline Logging)
+# ========================
+# Creates Azure SQL Database for storing Dino SDK pipeline logs
+
+module "sql_database" {
+  count  = var.enable_sql_database ? 1 : 0
+  source = "./modules/sql_database"
+
+  # Basic parameters
+  projeto  = var.projeto
+  ambiente = var.ambiente
+  location = var.location
+
+  # Dependencies from foundation module
+  resource_group_name = module.foundation.resource_group_name
+  key_vault_id       = module.foundation.key_vault_id
+
+  # Tags
+  tags = var.tags
 
   depends_on = [module.foundation]
 }

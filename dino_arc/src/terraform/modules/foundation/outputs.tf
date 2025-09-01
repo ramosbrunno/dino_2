@@ -62,6 +62,17 @@ output "service_principal_tenant_id" {
   value       = data.azurerm_client_config.current.tenant_id
 }
 
+output "service_principal_client_id" {
+  description = "Client ID do Service Principal"
+  value       = azuread_application.main.client_id
+}
+
+output "service_principal_client_secret" {
+  description = "Client Secret do Service Principal"
+  value       = azuread_service_principal_password.main.value
+  sensitive   = true
+}
+
 # ========================
 # Tags Output
 # ========================

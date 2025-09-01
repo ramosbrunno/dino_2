@@ -1,6 +1,12 @@
 include README.md
 include requirements.txt
 include EXEMPLOS_CLI.md
+include PACKAGE-README.md
+include PACOTE_FINALIZADO.md
+include *.py
+include dino_arc.py
+recursive-include src *.py
+recursive-include scripts *.py
 recursive-include src/terraform *.tf
 recursive-include src/terraform *.tfvars.example
 recursive-include src/terraform *.gitignore
@@ -9,8 +15,10 @@ recursive-include src/databricks_config *.py
 recursive-include src/databricks_config *.sh
 recursive-include src/databricks_config *.bat
 recursive-include src/databricks_config *.md
+recursive-include scripts *.py
 recursive-include tests *.py
 recursive-include tests *.md
+recursive-include tests *.tf
 global-exclude *.pyc
 global-exclude __pycache__
 global-exclude *.egg-info

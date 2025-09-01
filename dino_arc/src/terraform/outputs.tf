@@ -60,6 +60,52 @@ output "databricks_workspace_id" {
 }
 
 # ========================
+# SQL Database Module Outputs (Conditional)
+# ========================
+
+output "sql_server_name" {
+  description = "Nome do SQL Server para logs do Dino SDK (se habilitado)"
+  value       = var.enable_sql_database ? module.sql_database[0].sql_server_name : null
+}
+
+output "sql_server_fqdn" {
+  description = "FQDN do SQL Server para logs do Dino SDK (se habilitado)"
+  value       = var.enable_sql_database ? module.sql_database[0].sql_server_fqdn : null
+}
+
+output "sql_database_name" {
+  description = "Nome do banco de dados de logs do Dino SDK (se habilitado)"
+  value       = var.enable_sql_database ? module.sql_database[0].sql_database_name : null
+}
+
+output "sql_connection_string_secret_name" {
+  description = "Nome do secret no Key Vault com connection string (se habilitado)"
+  value       = var.enable_sql_database ? "sql-connection-string" : null
+}
+
+# Unity Catalog Storage Outputs
+output "unity_catalog_storage_account_name" {
+  description = "Nome da storage account do Unity Catalog (se Databricks habilitado)"
+  value       = var.enable_databricks ? module.databricks[0].unity_catalog_storage_account_name : null
+}
+
+output "unity_catalog_container_name" {
+  description = "Nome do container do Unity Catalog (se Databricks habilitado)"
+  value       = var.enable_databricks ? module.databricks[0].unity_catalog_container_name : null
+}
+
+output "unity_catalog_storage_root" {
+  description = "URI root para Unity Catalog Storage (se Databricks habilitado)"
+  value       = var.enable_databricks ? module.databricks[0].unity_catalog_storage_root : null
+}
+
+output "dino_sdk_database_config" {
+  description = "Configuração do banco para uso do Dino SDK (se habilitado)"
+  value       = var.enable_sql_database ? module.sql_database[0].sql_connection_info : null
+  sensitive   = false
+}
+
+# ========================
 # Deployment Summary
 # ========================
 
@@ -68,9 +114,11 @@ output "deployment_summary" {
   value = {
     foundation = module.foundation.foundation_summary
     databricks = var.enable_databricks ? module.databricks[0].databricks_summary : null
+    sql_database = var.enable_sql_database ? module.sql_database[0].sql_connection_info : null
     modules_enabled = {
       foundation = true
       databricks = var.enable_databricks
+      sql_database = var.enable_sql_database
     }
     deployment_info = {
       projeto           = var.projeto
@@ -80,4 +128,5 @@ output "deployment_summary" {
       timestamp         = timestamp()
     }
   }
+  sensitive = false
 }

@@ -30,29 +30,15 @@ output "databricks_sku" {
 }
 
 # ========================
-# Storage Account Outputs (DBFS Root)
-# ========================
-
-output "storage_account_name" {
-  description = "Nome da Storage Account para DBFS Root"
-  value       = azurerm_storage_account.databricks.name
-}
-
-output "storage_account_id" {
-  description = "ID da Storage Account para DBFS Root"
-  value       = azurerm_storage_account.databricks.id
-}
-
-output "storage_account_primary_endpoint" {
-  description = "Endpoint primário da Storage Account"
-  value       = azurerm_storage_account.databricks.primary_blob_endpoint
-}
-
-# ========================
 # Unity Catalog Storage Outputs
 # ========================
 
 output "unity_catalog_storage_name" {
+  description = "Nome da Storage Account para Unity Catalog"
+  value       = azurerm_storage_account.unity_catalog.name
+}
+
+output "unity_catalog_storage_account_name" {
   description = "Nome da Storage Account para Unity Catalog"
   value       = azurerm_storage_account.unity_catalog.name
 }
@@ -75,12 +61,6 @@ output "unity_catalog_container_name" {
 output "unity_catalog_storage_root" {
   description = "URI root para Unity Catalog Storage"
   value       = "abfss://${azurerm_storage_container.unity_catalog.name}@${azurerm_storage_account.unity_catalog.name}.dfs.core.windows.net/"
-}
-
-output "databricks_access_token" {
-  description = "Token de acesso do Databricks (sensível)"
-  value       = random_password.databricks_token.result
-  sensitive   = true
 }
 
 # ========================
@@ -114,14 +94,6 @@ output "databricks_summary" {
       features     = ["unity-catalog", "serverless", "premium"]
     }
     storage = {
-      dbfs_root = {
-        name               = azurerm_storage_account.databricks.name
-        id                 = azurerm_storage_account.databricks.id
-        primary_endpoint   = azurerm_storage_account.databricks.primary_blob_endpoint
-        account_tier       = azurerm_storage_account.databricks.account_tier
-        replication_type   = azurerm_storage_account.databricks.account_replication_type
-        hierarchical_namespace = azurerm_storage_account.databricks.is_hns_enabled
-      }
       unity_catalog = {
         name               = azurerm_storage_account.unity_catalog.name
         id                 = azurerm_storage_account.unity_catalog.id
