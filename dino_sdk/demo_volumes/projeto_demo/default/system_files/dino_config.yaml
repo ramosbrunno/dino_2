@@ -1,0 +1,42 @@
+dino_sdk:
+  version: 1.0.0
+  created_at: '2024-01-15T10:30:00'
+  keyvault:
+    name: dino-keyvault-demo
+    url: https://dino-keyvault-demo.vault.azure.net/
+    secret_scope: dino-scope
+  project:
+    name: projeto_demo
+    spn_id: demo-spn-12345
+  databricks:
+    workspace_url: https://adb-demo123.azuredatabricks.net
+    workspace_id: 1234567890123456
+    catalog_name: main
+    checkpoint_base_path: /Volumes/projeto_demo/default/checkpoints/dino_sdk
+    volume_base_path: /Volumes/projeto_demo/default
+  azure_sql:
+    enabled: true
+    server: demo-sql-server.database.windows.net
+    database: demo_analytics_db
+    connection_string_secret: sql-connection-string
+  unity_catalog:
+    storage_name: demostorage
+    storage_key_secret: unity-catalog-storage-key
+  authentication:
+    tenant_id: demo-tenant-12345
+    spn_client_id: demo-client-id-12345
+    spn_client_secret_secret: spn-client-secret
+  secret_references:
+    description: Secrets disponíveis no scope dino-scope
+    secrets:
+    - databricks-workspace-id
+    - databricks-workspace-url
+    - spn-client-id
+    - spn-client-secret
+    - sql-admin-password
+    - sql-connection-string
+    - sql-database-name
+    - sql-server-name
+    - tenant-id
+    - unity-catalog-storage-key
+    - unity-catalog-storage-name

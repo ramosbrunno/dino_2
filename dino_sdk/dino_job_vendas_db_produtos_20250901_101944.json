@@ -1,0 +1,133 @@
+{
+  "name": "Ingestao_Produtos_Demo",
+  "description": "Dino SDK - Ingestão automatizada para vendas_db.produtos",
+  "tags": {
+    "created_by": "dino-sdk",
+    "schema": "vendas_db",
+    "table": "produtos",
+    "format": "csv",
+    "automated": "true"
+  },
+  "tasks": [
+    {
+      "task_key": "dino_ingestion",
+      "description": "Ingestão de dados para vendas_db.produtos",
+      "new_cluster": {
+        "spark_version": "13.3.x-scala2.12",
+        "node_type_id": "i3.xlarge",
+        "num_workers": 2,
+        "spark_conf": {
+          "spark.databricks.delta.autoCompact.enabled": "true",
+          "spark.databricks.delta.optimizeWrite.enabled": "true",
+          "spark.databricks.cluster.profile": "serverless",
+          "spark.master": null
+        },
+        "custom_tags": {
+          "ResourceClass": "Serverless",
+          "CreatedBy": "DinoSDK"
+        },
+        "enable_elastic_disk": true,
+        "data_security_mode": "SINGLE_USER",
+        "runtime_engine": "STANDARD"
+      },
+      "spark_python_task": {
+        "python_file": "dbfs:/dino-sdk/scripts/run_ingestion.py",
+        "parameters": [
+          "--target-schema=vendas_db",
+          "--table-name=produtos",
+          "--file-path=/Volumes/main/landing/produtos/",
+          "--delimiter=,",
+          "--file-format=csv"
+        ]
+      },
+      "libraries": [
+        {
+          "pypi": {
+            "package": "dino-sdk"
+          }
+        },
+        {
+          "pypi": {
+            "package": "databricks-sdk>=0.18.0"
+          }
+        },
+        {
+          "pypi": {
+            "package": "pyspark>=3.4.0"
+          }
+        }
+      ],
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "configure_genie",
+      "description": "Configurar Genie para vendas_db.produtos",
+      "new_cluster": {
+        "spark_version": "13.3.x-scala2.12",
+        "node_type_id": "i3.xlarge",
+        "num_workers": 2,
+        "spark_conf": {
+          "spark.databricks.delta.autoCompact.enabled": "true",
+          "spark.databricks.delta.optimizeWrite.enabled": "true",
+          "spark.databricks.cluster.profile": "serverless",
+          "spark.master": null
+        },
+        "custom_tags": {
+          "ResourceClass": "Serverless",
+          "CreatedBy": "DinoSDK"
+        },
+        "enable_elastic_disk": true,
+        "data_security_mode": "SINGLE_USER",
+        "runtime_engine": "STANDARD"
+      },
+      "python_wheel_task": {
+        "package_name": "dino_sdk",
+        "entry_point": "configure_genie",
+        "parameters": [
+          "--schema=vendas_db",
+          "--table=produtos"
+        ]
+      },
+      "timeout_seconds": 900,
+      "depends_on": [
+        {
+          "task_key": "dino_ingestion"
+        }
+      ]
+    }
+  ],
+  "job_clusters": [
+    {
+      "job_cluster_key": "dino_cluster",
+      "new_cluster": {
+        "spark_version": "13.3.x-scala2.12",
+        "node_type_id": "i3.xlarge",
+        "num_workers": 2,
+        "spark_conf": {
+          "spark.databricks.delta.autoCompact.enabled": "true",
+          "spark.databricks.delta.optimizeWrite.enabled": "true",
+          "spark.databricks.cluster.profile": "serverless",
+          "spark.master": null
+        },
+        "custom_tags": {
+          "ResourceClass": "Serverless",
+          "CreatedBy": "DinoSDK"
+        },
+        "enable_elastic_disk": true,
+        "data_security_mode": "SINGLE_USER",
+        "runtime_engine": "STANDARD"
+      }
+    }
+  ],
+  "email_notifications": {
+    "on_failure": [],
+    "on_success": []
+  },
+  "trigger": {
+    "file_arrival": {
+      "url": "/Volumes/main/landing/produtos/",
+      "min_time_between_triggers_seconds": 60,
+      "wait_after_last_change_seconds": 300
+    }
+  }
+}

@@ -43,6 +43,8 @@ setup(
     entry_points={
         "console_scripts": [
             "dino-ingest=src.cli:main",
+            "dino-config=src.config_cli:config",
+            "dino-logs=src.logs_cli:logs_cli",
         ],
     },
     
