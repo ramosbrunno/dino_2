@@ -3,12 +3,13 @@ Setup configuration for Dino SDK
 Data Ingestion SDK for Databricks with Unity Catalog integration
 """
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import os
 
 # Ler requirements
 def read_requirements():
-    requirements_path = os.path.join(os.path.dirname(__file__), 'requirements.txt')
+    # Use requirements mínimos para teste
+    requirements_path = os.path.join(os.path.dirname(__file__), 'requirements_minimal.txt')
     if os.path.exists(requirements_path):
         with open(requirements_path, 'r', encoding='utf-8') as f:
             return [line.strip() for line in f if line.strip() and not line.startswith('#')]
@@ -24,7 +25,7 @@ def read_readme():
 
 setup(
     name="dino-sdk",
-    version="1.0.0",
+    version="1.2.0",
     description="SDK de ingestão de dados para Databricks com Unity Catalog e Genie",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
@@ -32,9 +33,12 @@ setup(
     author_email="support@datamaster.com",
     url="https://github.com/ramosbrunno/dino_2",
     
-    # Package discovery - estrutura com src
-    packages=['src'],
-    package_dir={'src': 'src'},
+    # Package discovery - estrutura simplificada
+    packages=find_packages(),
+    package_dir={'': '.'},
+    
+    # Include all Python files
+    include_package_data=True,
     
     # Dependencies
     install_requires=read_requirements(),

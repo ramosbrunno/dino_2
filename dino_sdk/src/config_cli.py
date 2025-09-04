@@ -20,76 +20,161 @@ def config():
 
 
 @config.command()
-@click.option('--keyvault-name', required=True, help='Nome do Azure Key Vault contendo os secrets')
-@click.option('--catalog-name', required=True, help='Nome do catálogo Unity Catalog (usado no path do Volumes)')
-@click.option('--project-spn-id', help='Service Principal ID do projeto (para permissões READ)')
-def setup(keyvault_name: str, catalog_name: str, project_spn_id: str = None):
+@click.option('--project-name', required=True, help='Nome do projeto')
+@click.option('--storage-name', required=True, help='Nome do Storage Account para External Location')
+@click.option('--catalog-name', required=True, help='Nome do catálogo Unity Catalog')
+@click.option('--schema-name', required=True, help='Nome do schema destino (será criado se não existir)')
+def setup(project_name: str, storage_name: str, catalog_name: str, schema_name: str):
     """
-    Configuração inicial do Dino SDK usando Azure Key Vault
+    Configuração simplificada do Dino SDK - Criação de Schema no Unity Catalog
     
     Este comando:
-    1. Conecta ao Azure Key Vault especificado
-    2. Extrai os secrets necessários para o Dino SDK
-    3. Cria Secret Scope no Databricks apontando para o Key Vault
-    4. Configura permissões (MANAGE para dino SPN, READ para projeto SPN)
-    5. Gera arquivo de configuração YAML no Volume
+    1. Conecta ao workspace Databricks atual
+    2. Verifica se o catálogo e external location existem
+    3. Cria o schema no catálogo especificado
+    4. Gera arquivo de configuração YAML no Volume
     
-    Secrets esperados no Key Vault:
-    - databricks-workspace-id
-    - databricks-workspace-url  
-    - spn-client-id
-    - spn-client-secret
-    - sql-admin-password
-    - sql-connection-string
-    - sql-database-name
-    - sql-server-name
-    - tenant-id
-    - unity-catalog-storage-key
-    - unity-catalog-storage-name
+    IMPORTANTE: É necessário criar manualmente o Secret Scope antes de usar este comando.
+    Para criar o Secret Scope, siga as instruções em:
+    https://learn.microsoft.com/en-us/azure/databricks/security/secrets/
     
     Example:
-        dino-config setup --keyvault-name meu-keyvault --catalog-name vendas --project-spn-id abc-123
+        dino-config setup --project-name bronze --storage-name mystorageaccount --catalog-name vendas --schema-name bronze
     """
-    print("🦕 Dino SDK - Configuração com Key Vault")
+    print("🦕 Dino SDK - Configuração Simplificada")
     print("=" * 45)
     
     try:
-        # Executar configuração
-        from .keyvault_config import KeyVaultConfigManager
+        # Detectar ambiente Databricks e obter sessão Spark
+        spark_session = None
         
-        kv_manager = KeyVaultConfigManager(
-            keyvault_name=keyvault_name,
-            project_name=catalog_name,  # Usando catalog_name como project_name
-            project_spn_id=project_spn_id
-        )
+        # Método 1: Tentar acessar variável global spark (Databricks)
+        try:
+            import builtins
+            if hasattr(builtins, 'spark'):
+                spark_session = builtins.spark
+                print("✅ Detectado ambiente Databricks - usando sessão global")
+        except:
+            pass
         
-        result = kv_manager.setup_complete_configuration()
+        # Método 2: Tentar obter do contexto global atual
+        if spark_session is None:
+            try:
+                # Acessar spark do contexto global
+                import sys
+                frame = sys._getframe(1)
+                if 'spark' in frame.f_globals:
+                    spark_session = frame.f_globals['spark']
+                    print("✅ Sessão Spark encontrada no contexto global")
+            except:
+                pass
         
-        if result['success']:
-            print(f"✅ Configuração concluída com sucesso!")
-            print(f"🔐 Key Vault: {keyvault_name}")
-            print(f"📁 Catálogo: {catalog_name}")
-            print(f"🔑 Secret Scope: dino-scope")
-            print(f"📄 Config YAML: /Volumes/{catalog_name}/default/system_files/dino_config.yaml")
-            
-            if project_spn_id:
-                print(f"🆔 SPN Projeto: {project_spn_id} (read access)")
-        else:
-            print(f"❌ Erro na configuração: {result['message']}")
-            if result.get('details'):
-                for detail in result['details']:
-                    print(f"   • {detail}")
+        # Método 3: Tentar criar/obter sessão ativa
+        if spark_session is None:
+            try:
+                from pyspark.sql import SparkSession
+                spark_session = SparkSession.getActiveSession()
+                if spark_session:
+                    print("✅ Sessão Spark ativa encontrada")
+                else:
+                    # Tentar obter do driver
+                    from pyspark import SparkContext
+                    if SparkContext._active_spark_context:
+                        spark_session = SparkSession(SparkContext._active_spark_context)
+                        print("✅ Sessão Spark criada a partir do contexto ativo")
+            except Exception as e:
+                print(f"⚠️ Erro ao obter sessão Spark via PySpark: {e}")
         
-    except ImportError:
-        print("❌ Dependências não instaladas:")
-        print("pip install azure-keyvault-secrets azure-identity databricks-sdk")
+        # Método 4: Última tentativa - executar código para acessar spark
+        if spark_session is None:
+            try:
+                # Tentar executar 'spark' diretamente
+                exec_globals = {}
+                exec('spark_session = spark', globals(), exec_globals)
+                spark_session = exec_globals.get('spark_session')
+                if spark_session:
+                    print("✅ Sessão Spark obtida via execução direta")
+            except:
+                pass
+        
+        if spark_session is None:
+            print("❌ Não foi possível obter sessão Spark")
+            print("💡 Certifique-se de que está executando em um notebook Databricks")
+            print("💡 Ou em um ambiente com PySpark configurado")
+            return
+        
+        # Usar spark_session em vez de spark
+        spark = spark_session
+        
+        print(f"🏢 Projeto: {project_name}")
+        print(f"💾 Storage: {storage_name}")
+        print(f"📁 Catálogo: {catalog_name}")
+        print(f"📊 Schema: {schema_name}")
+        
+        # Verificar se o catálogo existe
+        print(f"\n🔍 Verificando catálogo '{catalog_name}'...")
+        try:
+            spark.sql(f"DESCRIBE CATALOG {catalog_name}").collect()
+            print(f"✅ Catálogo '{catalog_name}' encontrado")
+        except Exception as e:
+            print(f"❌ Catálogo '{catalog_name}' não encontrado: {e}")
+            return
+        
+        # Obter external location
+        print(f"🔍 Obtendo external location para '{catalog_name}'...")
+        try:
+            external_location = spark.sql(f"DESCRIBE EXTERNAL LOCATION {catalog_name}").select("url").collect()[0].url
+            print(f"✅ External Location: {external_location}")
+        except Exception as e:
+            print(f"❌ Erro ao obter external location: {e}")
+            return
+        
+        # Criar schema
+        schema_location = f"{external_location}/{catalog_name}/{schema_name}/"
+        print(f"\n� Criando schema '{catalog_name}.{schema_name}'...")
+        print(f"� Localização: {schema_location}")
+        
+        try:
+            spark.sql(f"""
+                CREATE SCHEMA IF NOT EXISTS {catalog_name}.{schema_name}
+                MANAGED LOCATION '{schema_location}'
+            """)
+            print(f"✅ Schema '{catalog_name}.{schema_name}' criado com sucesso!")
+        except Exception as e:
+            print(f"❌ Erro ao criar schema: {e}")
+            return
+        
+        # Criar configuração básica
+        from .config_manager import get_config_manager
+        
+        config_manager = get_config_manager()
+        config_updates = {
+            'project_name': project_name,
+            'storage_name': storage_name,
+            'catalog_name': catalog_name,
+            'schema_name': schema_name,
+            'external_location': external_location,
+            'schema_location': schema_location
+        }
+        
+        config_manager.update_config(config_updates)
+        
+        print(f"\n🎉 Configuração concluída com sucesso!")
+        print(f"📊 Schema: {catalog_name}.{schema_name}")
+        print(f"📍 Localização: {schema_location}")
+        print(f"\n⚠️  LEMBRETE: Crie manualmente o Secret Scope seguindo:")
+        print(f"   https://learn.microsoft.com/en-us/azure/databricks/security/secrets/")
+        
+    except ImportError as e:
+        print(f"❌ Dependências não instaladas: {e}")
+        print("Este comando deve ser executado no ambiente Databricks")
     except Exception as e:
         print(f"❌ Erro na configuração: {e}")
 
 
 @config.command()
 def show():
-    """Mostra configuração atual"""
+    """Mostra configuração atual do Dino SDK"""
     print("🦕 Dino SDK - Configuração Atual")
     print("=" * 50)
     
@@ -112,42 +197,92 @@ def show():
                     print(f"{key}: {value}")
     else:
         print("⚠️ Nenhuma configuração encontrada")
-        print("💡 Execute: dino-config init")
+        print("💡 Execute: dino-config setup --help")
 
 
 @config.command()
-@click.option('--keyvault-name', required=True, help='Nome do Azure Key Vault')
 @click.option('--catalog-name', required=True, help='Nome do catálogo Unity Catalog')
-def validate_keyvault(keyvault_name: str, catalog_name: str):
+@click.option('--schema-name', required=True, help='Nome do schema a validar')
+def validate(catalog_name: str, schema_name: str):
     """
-    Valida configuração do Key Vault e Secret Scope
+    Valida se catálogo e schema existem no Unity Catalog
     
     Example:
-        dino-config validate-keyvault --keyvault-name meu-keyvault --catalog-name vendas
+        dino-config validate --catalog-name vendas --schema-name bronze
     """
     print("🔍 Dino SDK - Validação de Configuração")
     print("=" * 45)
     
     try:
-        from .keyvault_config import validate_keyvault_config
+        # Detectar ambiente Databricks e obter sessão Spark (mesmo método)
+        spark_session = None
         
-        # Validar acesso ao Key Vault
-        validation_result = validate_keyvault_config(keyvault_name, catalog_name)
+        # Método 1: Tentar acessar variável global spark (Databricks)
+        try:
+            import builtins
+            if hasattr(builtins, 'spark'):
+                spark_session = builtins.spark
+        except:
+            pass
         
-        if validation_result['success']:
-            print(f"✅ Key Vault '{keyvault_name}' acessível")
-            print(f"   📋 Secrets encontrados: {len(validation_result['secrets_found'])}")
-            
-            if validation_result['secrets_missing']:
-                print(f"   ⚠️ Secrets faltando: {', '.join(validation_result['secrets_missing'])}")
-        else:
-            print(f"❌ Problemas na validação:")
-            for error in validation_result['errors']:
-                print(f"   - {error}")
-                
+        # Método 2: Tentar obter do contexto global atual
+        if spark_session is None:
+            try:
+                import sys
+                frame = sys._getframe(1)
+                if 'spark' in frame.f_globals:
+                    spark_session = frame.f_globals['spark']
+            except:
+                pass
+        
+        # Método 3: Tentar criar/obter sessão ativa
+        if spark_session is None:
+            try:
+                from pyspark.sql import SparkSession
+                spark_session = SparkSession.getActiveSession()
+                if not spark_session:
+                    from pyspark import SparkContext
+                    if SparkContext._active_spark_context:
+                        spark_session = SparkSession(SparkContext._active_spark_context)
+            except:
+                pass
+        
+        # Método 4: Última tentativa
+        if spark_session is None:
+            try:
+                exec_globals = {}
+                exec('spark_session = spark', globals(), exec_globals)
+                spark_session = exec_globals.get('spark_session')
+            except:
+                pass
+        
+        if spark_session is None:
+            print("❌ Não foi possível obter sessão Spark")
+            print("💡 Execute em um notebook Databricks")
+            return
+        
+        spark = spark_session
+        
+        print(f"📊 Validando catálogo: {catalog_name}")
+        try:
+            spark.sql(f"DESCRIBE CATALOG {catalog_name}").collect()
+            print(f"✅ Catálogo '{catalog_name}' existe")
+        except Exception as e:
+            print(f"❌ Catálogo '{catalog_name}' não encontrado: {e}")
+            return
+        
+        print(f"� Validando schema: {catalog_name}.{schema_name}")
+        try:
+            spark.sql(f"DESCRIBE SCHEMA {catalog_name}.{schema_name}").collect()
+            print(f"✅ Schema '{catalog_name}.{schema_name}' existe")
+        except Exception as e:
+            print(f"❌ Schema '{catalog_name}.{schema_name}' não encontrado: {e}")
+            return
+        
+        print(f"\n🎉 Configuração validada com sucesso!")
+        
     except ImportError:
-        print("❌ Dependências não instaladas:")
-        print("pip install azure-keyvault-secrets azure-identity databricks-sdk")
+        print("❌ Este comando deve ser executado no ambiente Databricks")
     except Exception as e:
         print(f"❌ Erro na validação: {e}")
 
