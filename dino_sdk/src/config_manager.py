@@ -240,6 +240,10 @@ class ConfigManager:
         self._config[key] = value
         self._save_config()
     
+    def get_all_variables(self) -> Dict[str, Any]:
+        """Retorna todas as variáveis de configuração"""
+        return self._config.copy()
+    
     def get_config_file_path(self) -> str:
         """Retorna o caminho do arquivo de configuração"""
         return self.config_file

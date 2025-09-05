@@ -33,9 +33,9 @@ setup(
     author_email="support@datamaster.com",
     url="https://github.com/ramosbrunno/dino_2",
     
-    # Package discovery - estrutura simplificada
-    packages=find_packages(),
-    package_dir={'': '.'},
+    # Package discovery - estrutura corrigida para src layout
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     
     # Include all Python files
     include_package_data=True,
@@ -43,12 +43,11 @@ setup(
     # Dependencies
     install_requires=read_requirements(),
     
-    # Console scripts - CLI commands
+    # Console scripts - CLI commands (ajustados para src layout)
     entry_points={
         "console_scripts": [
-            "dino-ingest=src.cli:main",
-            "dino-config=src.config_cli:config",
-            "dino-logs=src.logs_cli:logs_cli",
+            "dino-ingest=dino_sdk.cli:main",
+            "dino-config=dino_sdk.config_cli:config",
         ],
     },
     
