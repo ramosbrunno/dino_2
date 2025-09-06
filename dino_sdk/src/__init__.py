@@ -3,7 +3,7 @@ Dino SDK - Data Ingestion SDK for Databricks
 SDK simplificado para automação de ingestão de dados no Databricks com Unity Catalog
 """
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __author__ = "Data Master Team"
 __email__ = "support@datamaster.com"
 
@@ -36,6 +36,27 @@ def get_workflow_manager():
     """Importa WorkflowManager evitando dependências circulares"""
     from .workflow_manager import WorkflowManager
     return WorkflowManager
+
+# Imports diretos para WorkflowManager (função helper implementada no workflow_manager.py)
+try:
+    from .workflow_manager import (
+        DinoWorkflowManager, 
+        DinoWorkflowConfig, 
+        create_dino_workflow
+    )
+    __all__ = [
+        'configure_dino_sdk', 'validate_dino_config', 'show_dino_config',
+        'quick_setup', 'setup_with_azure_sql', 'create_unity_catalog_schema',
+        'get_ingestion_engine', 'get_genie_assistant', 'get_job_manager', 'get_workflow_manager',
+        'DinoWorkflowManager', 'DinoWorkflowConfig', 'create_dino_workflow'
+    ]
+except ImportError as e:
+    # WorkflowManager não implementado ainda, usar apenas o básico
+    __all__ = [
+        'configure_dino_sdk', 'validate_dino_config', 'show_dino_config',
+        'quick_setup', 'setup_with_azure_sql', 'create_unity_catalog_schema',
+        'get_ingestion_engine', 'get_genie_assistant', 'get_job_manager', 'get_workflow_manager'
+    ]
 
 # Funções de criação de Schema no Unity Catalog
 def create_unity_catalog_schema(catalog_name: str, schema_name: str) -> bool:

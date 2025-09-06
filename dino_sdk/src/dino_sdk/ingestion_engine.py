@@ -750,3 +750,16 @@ def ingest_csv_to_unity_catalog(
     
     engine = IngestionEngine(spark)
     return engine.ingest(config)
+
+
+def get_ingestion_engine(spark: SparkSession) -> IngestionEngine:
+    """
+    Função de conveniência para obter uma instância do IngestionEngine.
+    
+    Args:
+        spark: Sessão Spark
+        
+    Returns:
+        Uma instância configurada do IngestionEngine
+    """
+    return IngestionEngine(spark)

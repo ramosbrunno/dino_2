@@ -25,8 +25,8 @@ def read_readme():
 
 setup(
     name="dino-sdk",
-    version="1.2.0",
-    description="SDK de ingestão de dados para Databricks com Unity Catalog e Genie",
+    version="2.0.0",
+    description="SDK de ingestão de dados para Databricks com Unity Catalog e WorkflowManager",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     author="Data Master Team",
