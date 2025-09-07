@@ -595,7 +595,182 @@ class DinoWorkflowManager:
             "on_success": config.email_notifications.get('on_success', []),
             "on_failure": config.email_notifications.get('on_failure', [])
         }
-   
+    
+    def create_notebook_template(self, config: DinoWorkflowConfig) -> str:
+        """
+        Gera template de notebook para ser usado pelo workflow
+        
+        Args:
+            config: Configuração do workflow
+            
+        Returns:
+            String com o código do notebook template
+        """
+        
+        clustering_columns_code = ""
+        if config.clustering_columns:
+            clustering_columns_code = f"clustering_columns={config.clustering_columns},"
+        
+        template = f'''# Databricks notebook source
+# MAGIC %md
+# MAGIC # 🦕 DINO SDK v1.2.0 - Workflow de Ingestão Automatizado
+# MAGIC 
+# MAGIC **Tabela**: `{config.catalog_name}.{config.schema_name}.{config.table_name}`  
+# MAGIC **Trigger**: {"File Arrival" if config.is_automated else "Scheduled"}
+# MAGIC 
+# MAGIC ---
+
+# COMMAND ----------
+
+# MAGIC %pip install /Volumes/main/default/system_files/wheels/dino_sdk-1.2.0-py3-none-any.whl --force-reinstall
+
+# COMMAND ----------
+
+# Restart Python para garantir que as instalações funcionem
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+# Importar DINO SDK
+from dino_sdk import IngestionEngine, IngestionConfig
+from dino_sdk.schema_manager import ensure_schema_simple
+import logging
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 📋 Parâmetros do Job
+
+# COMMAND ----------
+
+# Obter parâmetros do job (widgets do Databricks)
+catalog_name = dbutils.widgets.get("catalog_name") or "{config.catalog_name}"
+schema_name = dbutils.widgets.get("schema_name") or "{config.schema_name}"
+table_name = dbutils.widgets.get("table_name") or "{config.table_name}"
+source_path = dbutils.widgets.get("source_path") or "{config.source_path}"
+
+# Parâmetros avançados
+liquid_clustering = dbutils.widgets.get("liquid_clustering") or "{config.liquid_clustering}"
+schema_evolution_mode = dbutils.widgets.get("schema_evolution_mode") or "{config.schema_evolution_mode}"
+type_run = dbutils.widgets.get("type_run") or "{config.type_run}"
+clustering_columns_str = dbutils.widgets.get("clustering_columns") or ""
+
+# Converter strings para tipos corretos
+liquid_clustering = liquid_clustering.lower() == "true"
+clustering_columns = [col.strip() for col in clustering_columns_str.split(",") if col.strip()] if clustering_columns_str else {config.clustering_columns}
+
+print("🔧 Parâmetros carregados:")
+print(f"   • Destino: {{catalog_name}}.{{schema_name}}.{{table_name}}")
+print(f"   • Origem: {{source_path}}")
+print(f"   • Liquid Clustering: {{liquid_clustering}}")
+print(f"   • Colunas Clustering: {{clustering_columns}}")
+print(f"   • Tipo: {{type_run}}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 🏗️ Etapa 1: Criar Schema e Volumes
+
+# COMMAND ----------
+
+print("🏗️ Criando schema com volumes...")
+
+result = ensure_schema_simple(spark, catalog_name, schema_name)
+
+if result['success']:
+    print("✅ Schema e volumes configurados!")
+    if result.get('volumes_created'):
+        print(f"📦 Volumes criados: {{result['volumes_created']}}")
+    if result.get('volumes_existing'):
+        print(f"📦 Volumes existentes: {{result['volumes_existing']}}")
+else:
+    print("❌ Erro na configuração do schema:")
+    for error in result['errors']:
+        print(f"   • {{error}}")
+    raise Exception("Falha na configuração do schema")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 🚀 Etapa 2: Executar Ingestão
+
+# COMMAND ----------
+
+print("🚀 Iniciando ingestão de dados...")
+
+# Configurar ingestão
+config = IngestionConfig(
+    source_path=source_path,
+    catalog_name=catalog_name,
+    schema_name=schema_name,
+    table_name=table_name,
+    file_extension="csv",  # Ajustar conforme necessário
+    
+    # Configurações avançadas
+    liquid_clustering=liquid_clustering,
+    {clustering_columns_code}
+    schema_evolution_mode=schema_evolution_mode,
+    type_run=type_run,
+    
+    # Metadados
+    table_comment=f"Tabela criada pelo DINO SDK Workflow - {{table_name}}",
+    add_ingestion_metadata=True
+)
+
+print("⚙️ Configuração criada:")
+print(f"   • Clustering: {{config.liquid_clustering}}")
+print(f"   • Colunas: {{config.clustering_columns}}")
+print(f"   • Schema Evolution: {{config.schema_evolution_mode}}")
+
+# COMMAND ----------
+
+# Executar ingestão
+engine = IngestionEngine(config, spark)
+result = engine.process_data()
+
+if result['success']:
+    print("✅ Ingestão concluída com sucesso!")
+    
+    # Métricas se disponíveis
+    if 'records_processed' in result:
+        print(f"📊 Registros processados: {{result['records_processed']}}")
+    if 'execution_time' in result:
+        print(f"⏱️ Tempo de execução: {{result['execution_time']:.2f}}s")
+        
+    # Verificar resultado
+    table_full_name = f"{{catalog_name}}.{{schema_name}}.{{table_name}}"
+    df = spark.table(table_full_name)
+    record_count = df.count()
+    
+    print(f"📋 Total de registros na tabela: {{record_count}}")
+    
+else:
+    print("❌ Erro na ingestão:")
+    for error in result.get('errors', []):
+        print(f"   • {{error}}")
+    raise Exception("Falha na ingestão de dados")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## ✅ Workflow Concluído!
+# MAGIC 
+# MAGIC A ingestão foi executada com sucesso usando o **DINO SDK v1.2.0**.
+
+# COMMAND ----------
+
+print("🎉 Workflow de ingestão concluído com sucesso!")
+print(f"📋 Tabela: {{catalog_name}}.{{schema_name}}.{{table_name}}")
+print(f"📊 Registros: {{record_count}}")
+print("🦕 DINO SDK v1.2.0 - Ingestão automatizada!")
+'''
+        
+        return template
+    
     def get_job_status(self, job_id: int) -> Dict[str, Any]:
         """
         Obtém status de um job

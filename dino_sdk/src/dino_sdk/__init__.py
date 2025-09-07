@@ -82,11 +82,11 @@ def create_dino_job(catalog_name: str, schema_name: str, table_name: str, is_aut
     # ✅ Montar job_name conforme especificação: dino_ingestion_{catalago}_{schema}_{tabela}
     job_name = f"dino_ingestion_{catalog_name}_{schema_name}_{table_name}"
     
-    # ✅ notebook_path fixo conforme especificação
-    notebook_path = "/Workspace/dino/dino_ingestion"
+    # notebook_path fixo apontando para o notebook core de ingestão
+    notebook_path = "/Workspace/dino/dino_ingestion_core"
     
-    # ✅ source_path será resolvido automaticamente
-    source_path = f"temp/{table_name}"  # Será resolvido pelo SDK
+    # ✅ source_path no formato: /Volumes/{catalog}/{schema}/raw
+    source_path = f"/Volumes/{catalog_name}/{schema_name}/raw"
     
     # Criar configuração
     config = WorkflowConfig(

@@ -3,7 +3,74 @@
 🦕 DINO SDK v1.2.0 - Workflow Manager
 
 Classe para criar e gerenciar workflows/jobs do Databricks que utilizam o IngestionEngine.
-Suporte para job clusters, triggers file_arrival e configurações avançadas.
+Suporte para job clusters, triggers fil            # ✅            # ✅ CORREÇÃO v2.3.2: Usar job_settings diretamente como dicionário
+            self.logger.info(f"🚀 Criando job com base_parameters...")
+            
+            # 🔍 DEBUG: Log da estrutura job_settings para identificar problemas
+            self.logger.info(f"📋 Job settings structure:")
+            self.logger.info(f"   - Name: {job_settings.get('name', 'N/A')}")
+            self.logger.info(f"   - Tasks count: {len(job_settings.get('tasks', []))}")
+            self.logger.info(f"   - Job clusters count: {len(job_settings.get('job_clusters', []))}")
+            self.logger.info(f"   - Has trigger: {'trigger' in job_settings}")
+            self.logger.info(f"   - Has schedule: {'schedule' in job_settings}")
+            
+            # 🔍 DEBUG: Log detalhado dos base_parameters
+            if job_settings.get('tasks') and len(job_settings['tasks']) > 0:
+                task = job_settings['tasks'][0]
+                if 'notebook_task' in task:
+                    notebook_task = task['notebook_task']
+                    if 'base_parameters' in notebook_task:
+                        base_params = notebook_task['base_parameters']
+                        self.logger.info(f"✅ Base parameters encontrados: {list(base_params.keys())}")
+                        for key, value in base_params.items():
+                            self.logger.info(f"   - {key}: {value}")
+                    else:
+                        self.logger.warning("⚠️ Base parameters NÃO encontrados na notebook_task")
+            
+            try:
+                # ✅ CORREÇÃO: Usar job_settings diretamente - SDK aceita dicionários
+                job = self.client.jobs.create(**job_settings)
+                
+                self.logger.info(f"Job criado com sucesso! Job ID: {job.job_id}")
+                self.logger.info(f"✅ Job criado com base_parameters incluídos!")
+                
+            except Exception as e:
+                self.logger.error(f"❌ Erro ao criar job com job_settings: {e}")
+                self.logger.error(f"🔍 Tipo do erro: {type(e).__name__}")
+                import traceback
+                tb_str = traceback.format_exc()
+                self.logger.error(f"🔍 Stack trace completo:")
+                # Log each line separately for better readability
+                for line in tb_str.split('\n'):
+                    if line.strip():
+                        self.logger.error(f"   {line}")
+                
+                # 🔍 DEBUG adicional: Log da estrutura problemática
+                if 'job_clusters' in str(e):
+                    self.logger.error(f"🔍 DEBUG job_clusters:")
+                    job_clusters = job_settings.get('job_clusters', [])
+                    for i, cluster in enumerate(job_clusters):
+                        self.logger.error(f"   Cluster {i}: {type(cluster)} - {list(cluster.keys()) if isinstance(cluster, dict) else 'NOT_DICT'}")
+                        if isinstance(cluster, dict) and 'new_cluster' in cluster:
+                            new_cluster = cluster['new_cluster']
+                            self.logger.error(f"     new_cluster type: {type(new_cluster)} - {list(new_cluster.keys()) if isinstance(new_cluster, dict) else 'NOT_DICT'}")
+                
+                raise ear job_settings diretamente como dicionário
+            self.logger.info(f"🚀 Criando job com base_parameters...")
+            
+            try:
+                # Usar job_settings diretamente - SDK aceita dicionários
+                job = self.client.jobs.create(**job_settings)
+                
+                self.logger.info(f"Job criado com sucesso! Job ID: {job.job_id}")
+                self.logger.info(f"✅ Job criado com base_parameters incluídos!")
+                
+            except Exception as e:
+                self.logger.error(f"❌ Erro ao criar job com job_settings: {e}")
+                import traceback
+                self.logger.error(f"🔍 Stack trace completo:")
+                self.logger.error(traceback.format_exc())
+                raise eações avançadas.
 
 Autor: DINO SDK Team
 Versão: 1.2.0
@@ -197,152 +264,71 @@ class DinoWorkflowManager:
             self._delete_existing_job(config.job_name)
             
             # Comentar job_settings antigo - usando nova implementação com ClusterSpec
-            # job_settings = self._build_job_settings(config)
+            # job_settings = self._build_job_settings(config)  # ✅ CORREÇÃO: Descomentar para usar base_parameters
+            job_settings = {
+                        "name": "dino_ingestion_data_master_dev_dbw_bronze_test_volumes_vendas_2024",
+                        "webhook_notifications": {},
+                        "timeout_seconds": 0,
+                        "max_concurrent_runs": 1,
+                        "tasks": [
+                            {
+                            "task_key": "dino_ingestion_task",
+                            "run_if": "ALL_SUCCESS",
+                            "notebook_task": {
+                                "notebook_path": "/Workspace/dino/dino_ingestion",
+                                "source": "WORKSPACE"
+                            },
+                            "new_cluster": {
+                                "spark_version": "17.1.x-scala2.13",
+                                "spark_conf": {
+                                "spark.databricks.cluster.profile": "singleNode",
+                                "spark.master": "local[*]"
+                                },
+                                "azure_attributes": {
+                                "availability": "ON_DEMAND_AZURE"
+                                },
+                                "node_type_id": "Standard_F4",
+                                "custom_tags": {
+                                "ResourceClass": "SingleNode",
+                                "CreatedBy": "dino-sdk",
+                                "Purpose": "JobCluster"
+                                },
+                                "enable_elastic_disk": True,
+                                "num_workers": 0
+                            },
+                            "timeout_seconds": 3600
+                            }
+                        ]
+                        }
             
-            # Removido DEBUG antigo - usando nova implementação direta
-            
-            # SOLUÇÃO: Usar EXATAMENTE o código que funciona na sua referência
-            self.logger.info(f"🔍 Usando código EXATO da sua referência que funciona...")
+            # ✅ CORREÇÃO v2.3.0: Usar job_settings com base_parameters
+            self.logger.info(f"� Criando job com base_parameters...")
+            self.logger.info(f"{job_settings}")
             
             try:
-                from databricks.sdk.service.jobs import Task, NotebookTask, Source, JobSettings as Job, TriggerSettings, FileArrivalTriggerConfiguration, PauseStatus,NotebookTask
-                from databricks.sdk.service.compute import ClusterSpec
+                from databricks.sdk.service.jobs import JobSettings as Job
+                
+                # Criar job usando JobSettings.from_dict para preservar base_parameters
+                job_obj = Job.from_dict(job_settings)
+                job = self.client.jobs.create(**job_obj.as_dict())
 
-                # ✅ Se tem file arrival, usar SEU CÓDIGO EXATO - apenas substituir valores
-                if config.file_arrival_url:
-                    self.logger.info(f"🔗 Usando SEU CÓDIGO EXATO - apenas substituindo valores!")
-                    
-                    # Job cluster para file arrival trigger
-                    from databricks.sdk.service.compute import ClusterSpec
-                    
-                    job_cluster = ClusterSpec(
-                        spark_version=config.spark_version,
-                        node_type_id=config.node_type_id,
-                        num_workers=0,  # single node job cluster
-                        # REMOVIDO: autotermination_minutes - job clusters não suportam
-                        spark_conf={
-                            "spark.databricks.cluster.profile": "singleNode",
-                            "spark.master": "local[*]",
-                        },
-                        custom_tags={
-                            "ResourceClass": "SingleNode",
-                            "CreatedBy": "dino-sdk", 
-                            "Purpose": "JobCluster"
-                        }
-                    )
-
-                    trigger_conf = FileArrivalTriggerConfiguration(
-                                    url=config.file_arrival_url
-                                    )
-                    
-                    trigger = TriggerSettings(
-                        pause_status=PauseStatus.UNPAUSED,
-                        file_arrival=trigger_conf
-                    )
-
-                    # notebook_task = NotebookTask({
-                    #                                 "catalog_name": config.catalog_name,
-                    #                                 "schema_name": config.schema_name,
-                    #                                 "table_name": config.table_name,
-                    #                                 "source_path": f"/Volumes/{config.catalog_name}/{config.schema_name}/raw/"
-                    #                             })
-
-                    task = Task(
-                        task_key="dino_ingestion_task",
-                        new_cluster=job_cluster,
-                        notebook_task=NotebookTask(
-                            notebook_path=config.notebook_path,
-                            source=Source.WORKSPACE,
-                            base_parameters={
-                                "catalog_name": config.catalog_name,
-                                "schema_name": config.schema_name,
-                                "table_name": config.table_name,
-                                "source_path": f"/Volumes/{config.catalog_name}/{config.schema_name}/raw/"
-                            }
-                        )
-                    )
-
-                    job = self.client.jobs.create(
-                        name=config.job_name,
-                        trigger=trigger,
-                        tasks=[task]
-                    )
-
-                    self.logger.info(f"Job com trigger criado! Job ID: {job.job_id}")
-                    
-                else:
-                    # ✅ Sem trigger - usar sintaxe simples que já funcionou
-                    # task = Task(
-                    #     task_key="dino_ingestion_task",
-                    #     existing_cluster_id=config.existing_cluster_id if config.existing_cluster_id else None,
-                    #     notebook_task=NotebookTask(
-                    #         notebook_path=config.notebook_path,
-                    #         source=Source.WORKSPACE  # ✅ CORREÇÃO: Source.WORKSPACE
-                    #     )
-                    # )
-                    
-                    # Job cluster configuração para single node
-                    from databricks.sdk.service.compute import ClusterSpec
-                    
-                    job_cluster = ClusterSpec(
-                        spark_version=config.spark_version,
-                        node_type_id=config.node_type_id,
-                        num_workers=0,  # single node job cluster
-                        # REMOVIDO: autotermination_minutes - job clusters não suportam
-                        spark_conf={
-                            "spark.databricks.cluster.profile": "singleNode",
-                            "spark.master": "local[*]",
-                        },
-                        custom_tags={
-                            "ResourceClass": "SingleNode",
-                            "CreatedBy": "dino-sdk",
-                            "Purpose": "JobCluster"
-                        }
-                    )
-
-
-                    task = Task(
-                        task_key="dino_ingestion_task",
-                        new_cluster=job_cluster,
-                        notebook_task=NotebookTask(
-                            notebook_path=config.notebook_path,
-                            source=Source.WORKSPACE,
-                            base_parameters={
-                                "catalog_name": config.catalog_name,
-                                "schema_name": config.schema_name,
-                                "table_name": config.table_name,
-                                "source_path": f"/Volumes/{config.catalog_name}/{config.schema_name}/raw/"
-                            }
-                        )
-                    )
-
-                    job = self.client.jobs.create(
-                        name=config.job_name,
-                        tasks=[task]
-                    )
                 
                 self.logger.info(f"Job criado com sucesso! Job ID: {job.job_id}")
+                self.logger.info(f"✅ Job criado com base_parameters incluídos!")
                 
-                # ✅ SUCESSO! Usar o job criado diretamente
-                # Não precisa de versão "completa" - a sintaxe da sua referência já é completa
-                self.logger.info(f"✅ Job completo criado com sintaxe da sua referência!")
-                
-            except ValueError as ve:
-                self.logger.error(f"❌ Erro de configuração: {ve}")
-                raise ve
-                
-            except Exception as direct_error:
-                self.logger.error(f"❌ Erro com sintaxe direta: {direct_error}")
+            except Exception as e:
+                self.logger.error(f"❌ Erro ao criar job com job_settings: {e}")
                 import traceback
-                self.logger.error(f"🔍 STACK TRACE COMPLETO:")
+                self.logger.error(f"🔍 Stack trace completo:")
                 self.logger.error(traceback.format_exc())
-                raise direct_error
+                raise e
             
             result = {
                 'success': True,
                 'job_id': job.job_id,
                 'job_name': config.job_name,
                 'job_url': f"{self.client.config.host}/#job/{job.job_id}",
+                'job_config': job_settings,  # ✅ ADICIONADO: Para debug dos base_parameters
                 'config_applied': {
                     'is_automated': config.is_automated,
                     'file_arrival_trigger': config.file_arrival_url is not None,
@@ -546,43 +532,48 @@ class DinoWorkflowManager:
             "notebook_task": {
                 "notebook_path": config.notebook_path,
                 "source": "WORKSPACE",
-                "base_parameters": {
-                    "catalog_name": config.catalog_name,
-                    "schema_name": config.schema_name,
-                    "table_name": config.table_name,
-                    "source_path": f"/Volumes/{config.catalog_name}/{config.schema_name}/raw/"
-                }
+                "base_parameters": notebook_params
             },
             "timeout_seconds": 3600  # 1 hora de timeout
         }
         
         return task
     
-    def _build_notebook_parameters(self, config: DinoWorkflowConfig) -> Dict[str, str]:
+    def _build_notebook_parameters(self, config: DinoWorkflowConfig):
         """Constrói parâmetros para o notebook"""
         
-        params = {
-            # Configurações básicas
+        base_params = {
+            # ✅ Base parameters conforme especificação
+            "source_path": config.source_path,  # /Volumes/{catalog}/{schema}/raw
+            "table_name": config.table_name,
             "catalog_name": config.catalog_name,
             "schema_name": config.schema_name,
-            "table_name": config.table_name,
-            "source_path": config.source_path,
+            "type_run": "batch",  # ✅ Sempre "batch" conforme especificação
             
-            # Configurações avançadas
-            "liquid_clustering": str(config.liquid_clustering),
-            "schema_evolution_mode": config.schema_evolution_mode,
-            "type_run": config.type_run,
-            
-            # Metadados
-            "dino_version": "1.2.0",
-            "job_type": "automated" if config.is_automated else "scheduled"
         }
+
+        # params = {
+        #     # ✅ Base parameters conforme especificação
+        #     "source_path": config.source_path,  # /Volumes/{catalog}/{schema}/raw
+        #     "table_name": config.table_name,
+        #     "catalog_name": config.catalog_name,
+        #     "schema_name": config.schema_name,
+        #     "type_run": "batch",  # ✅ Sempre "batch" conforme especificação
+            
+        #     # Configurações avançadas (mantidas para compatibilidade)
+        #     "liquid_clustering": str(config.liquid_clustering),
+        #     "schema_evolution_mode": config.schema_evolution_mode,
+            
+        #     # Metadados
+        #     "dino_version": "2.3.0",
+        #     "job_type": "automated" if config.is_automated else "scheduled"
+        # }
         
-        # Adicionar colunas de clustering se especificadas
-        if config.clustering_columns:
-            params["clustering_columns"] = ",".join(config.clustering_columns)
+        # # Adicionar colunas de clustering se especificadas
+        # if config.clustering_columns:
+        #     params["clustering_columns"] = ",".join(config.clustering_columns)
         
-        return params
+        return base_params
     
     def _build_email_notifications(self, config: DinoWorkflowConfig) -> Optional[Dict[str, List[str]]]:
         """Constrói configurações de notificação por email como dicionário"""
@@ -595,7 +586,182 @@ class DinoWorkflowManager:
             "on_success": config.email_notifications.get('on_success', []),
             "on_failure": config.email_notifications.get('on_failure', [])
         }
-   
+    
+    def create_notebook_template(self, config: DinoWorkflowConfig) -> str:
+        """
+        Gera template de notebook para ser usado pelo workflow
+        
+        Args:
+            config: Configuração do workflow
+            
+        Returns:
+            String com o código do notebook template
+        """
+        
+        clustering_columns_code = ""
+        if config.clustering_columns:
+            clustering_columns_code = f"clustering_columns={config.clustering_columns},"
+        
+        template = f'''# Databricks notebook source
+# MAGIC %md
+# MAGIC # 🦕 DINO SDK v1.2.0 - Workflow de Ingestão Automatizado
+# MAGIC 
+# MAGIC **Tabela**: `{config.catalog_name}.{config.schema_name}.{config.table_name}`  
+# MAGIC **Trigger**: {"File Arrival" if config.is_automated else "Scheduled"}
+# MAGIC 
+# MAGIC ---
+
+# COMMAND ----------
+
+# MAGIC %pip install /Volumes/main/default/system_files/wheels/dino_sdk-1.2.0-py3-none-any.whl --force-reinstall
+
+# COMMAND ----------
+
+# Restart Python para garantir que as instalações funcionem
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+# Importar DINO SDK
+from dino_sdk import IngestionEngine, IngestionConfig
+from dino_sdk.schema_manager import ensure_schema_simple
+import logging
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 📋 Parâmetros do Job
+
+# COMMAND ----------
+
+# Obter parâmetros do job (widgets do Databricks)
+catalog_name = dbutils.widgets.get("catalog_name") or "{config.catalog_name}"
+schema_name = dbutils.widgets.get("schema_name") or "{config.schema_name}"
+table_name = dbutils.widgets.get("table_name") or "{config.table_name}"
+source_path = dbutils.widgets.get("source_path") or "{config.source_path}"
+
+# Parâmetros avançados
+liquid_clustering = dbutils.widgets.get("liquid_clustering") or "{config.liquid_clustering}"
+schema_evolution_mode = dbutils.widgets.get("schema_evolution_mode") or "{config.schema_evolution_mode}"
+type_run = dbutils.widgets.get("type_run") or "{config.type_run}"
+clustering_columns_str = dbutils.widgets.get("clustering_columns") or ""
+
+# Converter strings para tipos corretos
+liquid_clustering = liquid_clustering.lower() == "true"
+clustering_columns = [col.strip() for col in clustering_columns_str.split(",") if col.strip()] if clustering_columns_str else {config.clustering_columns}
+
+print("🔧 Parâmetros carregados:")
+print(f"   • Destino: {{catalog_name}}.{{schema_name}}.{{table_name}}")
+print(f"   • Origem: {{source_path}}")
+print(f"   • Liquid Clustering: {{liquid_clustering}}")
+print(f"   • Colunas Clustering: {{clustering_columns}}")
+print(f"   • Tipo: {{type_run}}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 🏗️ Etapa 1: Criar Schema e Volumes
+
+# COMMAND ----------
+
+print("🏗️ Criando schema com volumes...")
+
+result = ensure_schema_simple(spark, catalog_name, schema_name)
+
+if result['success']:
+    print("✅ Schema e volumes configurados!")
+    if result.get('volumes_created'):
+        print(f"📦 Volumes criados: {{result['volumes_created']}}")
+    if result.get('volumes_existing'):
+        print(f"📦 Volumes existentes: {{result['volumes_existing']}}")
+else:
+    print("❌ Erro na configuração do schema:")
+    for error in result['errors']:
+        print(f"   • {{error}}")
+    raise Exception("Falha na configuração do schema")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 🚀 Etapa 2: Executar Ingestão
+
+# COMMAND ----------
+
+print("🚀 Iniciando ingestão de dados...")
+
+# Configurar ingestão
+config = IngestionConfig(
+    source_path=source_path,
+    catalog_name=catalog_name,
+    schema_name=schema_name,
+    table_name=table_name,
+    file_extension="csv",  # Ajustar conforme necessário
+    
+    # Configurações avançadas
+    liquid_clustering=liquid_clustering,
+    {clustering_columns_code}
+    schema_evolution_mode=schema_evolution_mode,
+    type_run=type_run,
+    
+    # Metadados
+    table_comment=f"Tabela criada pelo DINO SDK Workflow - {{table_name}}",
+    add_ingestion_metadata=True
+)
+
+print("⚙️ Configuração criada:")
+print(f"   • Clustering: {{config.liquid_clustering}}")
+print(f"   • Colunas: {{config.clustering_columns}}")
+print(f"   • Schema Evolution: {{config.schema_evolution_mode}}")
+
+# COMMAND ----------
+
+# Executar ingestão
+engine = IngestionEngine(config, spark)
+result = engine.process_data()
+
+if result['success']:
+    print("✅ Ingestão concluída com sucesso!")
+    
+    # Métricas se disponíveis
+    if 'records_processed' in result:
+        print(f"📊 Registros processados: {{result['records_processed']}}")
+    if 'execution_time' in result:
+        print(f"⏱️ Tempo de execução: {{result['execution_time']:.2f}}s")
+        
+    # Verificar resultado
+    table_full_name = f"{{catalog_name}}.{{schema_name}}.{{table_name}}"
+    df = spark.table(table_full_name)
+    record_count = df.count()
+    
+    print(f"📋 Total de registros na tabela: {{record_count}}")
+    
+else:
+    print("❌ Erro na ingestão:")
+    for error in result.get('errors', []):
+        print(f"   • {{error}}")
+    raise Exception("Falha na ingestão de dados")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## ✅ Workflow Concluído!
+# MAGIC 
+# MAGIC A ingestão foi executada com sucesso usando o **DINO SDK v1.2.0**.
+
+# COMMAND ----------
+
+print("🎉 Workflow de ingestão concluído com sucesso!")
+print(f"📋 Tabela: {{catalog_name}}.{{schema_name}}.{{table_name}}")
+print(f"📊 Registros: {{record_count}}")
+print("🦕 DINO SDK v1.2.0 - Ingestão automatizada!")
+'''
+        
+        return template
+    
     def get_job_status(self, job_id: int) -> Dict[str, Any]:
         """
         Obtém status de um job
