@@ -1283,7 +1283,7 @@ class IngestionLogManager:
             )
             
             # Usar DataFrame para inserção segura
-            from pyspark.sql.types import StructType, StructField, StringType, TimestampType, LongType
+            from pyspark.sql.types import StructType, StructField, StringType, TimestampType, LongType, DoubleType
             
             # Preparar dados para inserção
             insert_data = [
@@ -1295,6 +1295,10 @@ class IngestionLogManager:
                     log_entry.source_path,
                     log_entry.execution_status,
                     log_entry.start_time,
+                    log_entry.end_time,
+                    log_entry.execution_duration_seconds,
+                    log_entry.records_read,
+                    log_entry.records_written,
                     log_entry.file_format,
                     log_entry.ingestion_type,
                     log_entry.message,
@@ -1312,6 +1316,10 @@ class IngestionLogManager:
                 StructField("source_path", StringType(), False),
                 StructField("execution_status", StringType(), False),
                 StructField("start_time", TimestampType(), False),
+                StructField("end_time", TimestampType(), True),
+                StructField("execution_duration_seconds", DoubleType(), True),
+                StructField("records_read", LongType(), True),
+                StructField("records_written", LongType(), True),
                 StructField("file_format", StringType(), True),
                 StructField("ingestion_type", StringType(), True),
                 StructField("message", StringType(), True),
