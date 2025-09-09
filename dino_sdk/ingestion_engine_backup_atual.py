@@ -754,7 +754,7 @@ class IngestionLogManager:
                 files_ingested STRING,
                 file_size_bytes BIGINT,
                 additional_metadata STRING,
-                created_at TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
             )
             USING DELTA
             TBLPROPERTIES (
@@ -1367,6 +1367,115 @@ class IngestionEngine:
     """
     
     def __init__(self, spark: SparkSession = None):
+        duration_seconds: float,
+        records_read: int = None,
+        records_written: int = None,
+        message: str = None,
+        error_message: str = None,
+        error_stack_trace: str = None,
+        files_ingested: str = None,
+        file_size_bytes: int = None
+    ) -> None:
+                self._create_log_table_if_not_exists(config.catalog_name, config.schema_name)
+                log_table_name = self._get_log_table_name(config.catalog_name, config.schema_name)
+                
+                # Preparar dados para inserção
+                from pyspark.sql.types import StructType, StructField, StringType, TimestampType, DoubleType, LongType
+                
+                insert_data = [
+                    (
+                        execution_id,
+                        config.table_name,
+                        config.schema_name,
+                        config.catalog_name,
+                        config.source_path,
+                        execution_status,
+                        start_time,
+                        end_time,
+                        duration_seconds,
+                        records_read,
+                        records_written,
+                        config.file_extension,
+                        config.type_run,
+                        message,
+                        error_message,
+                        error_stack_trace,
+                        files_ingested,
+                        file_size_bytes,
+                        str({
+                            "delimiter": getattr(config, 'file_delimiter', None),
+                            "header": getattr(config, 'file_header', None),
+                            "multiline": getattr(config, 'multiline', None),
+                            "schema_evolution_mode": getattr(config, 'schema_evolution_mode', None),
+                            "unity_catalog_enabled": True
+                        })
+                    )
+                ]
+                
+                insert_schema = StructType([
+                    StructField("execution_id", StringType(), False),
+                    StructField("table_name", StringType(), False),
+                    StructField("schema_name", StringType(), False),
+                    StructField("catalog_name", StringType(), False),
+                    StructField("source_path", StringType(), False),
+                    StructField("execution_status", StringType(), False),
+                    StructField("start_time", TimestampType(), False),
+                    StructField("end_time", TimestampType(), True),
+                    StructField("execution_duration_seconds", DoubleType(), True),
+                    StructField("records_read", LongType(), True),
+                    StructField("records_written", LongType(), True),
+                    StructField("file_format", StringType(), True),
+                    StructField("ingestion_type", StringType(), True),
+                    StructField("message", StringType(), True),
+                    StructField("error_message", StringType(), True),
+                    StructField("error_stack_trace", StringType(), True),
+                    StructField("files_ingested", StringType(), True),
+                    StructField("file_size_bytes", LongType(), True),
+                    StructField("additional_metadata", StringType(), True)
+                ])
+                
+                # Inserir dados na tabela Delta
+                insert_df = self.spark.createDataFrame(insert_data, insert_schema)
+                insert_df.write.format("delta").mode("append").saveAsTable(log_table_name)
+                
+                self.logger.info(f"✅ Log de ingestão salvo na tabela: {log_table_name}")
+                self.logger.info(f"📋 Execution ID: {execution_id}")
+                self.logger.info(f"� Status: {execution_status}")
+                self.logger.info(f"💬 Mensagem: {message}")
+                
+                return execution_id
+                
+        except Exception as table_error:
+            self.logger.warning(f"⚠️ Falha ao salvar na tabela Unity Catalog: {str(table_error)}")
+            
+            # Fallback para logging estruturado simples
+            log_bonitinho = {
+                "execution_id": execution_id,
+                "table": config.table_name,
+                "status": execution_status,
+                "duracao": f"{duration_seconds:.2f}s",
+                "registros_lidos": records_read or 0,
+                "registros_gravados": records_written or 0,
+                "timestamp": end_time.isoformat(),
+                "mensagem": message
+            }
+            
+            self.logger.info("="*80)
+            self.logger.info("🎯 LOG BONITINHO DA INGESTÃO")
+            self.logger.info("="*80)
+            for key, value in log_bonitinho.items():
+                self.logger.info(f"📋 {key}: {value}")
+            self.logger.info("="*80)
+            
+            return execution_id
+
+
+class IngestionEngine:
+    """
+    Motor principal de ingestão de dados.
+    """
+    
+    def __init__(self, spark: SparkSession = None):
         """
         Inicializa o motor de ingestão.
         
@@ -1582,104 +1691,6 @@ class IngestionEngine:
                 "file_size_bytes": file_size_bytes
             }
     
-    def save_ingestion_log(
-        self,
-        config: IngestionConfig,
-        execution_status: str,
-        start_time: datetime,
-        end_time: datetime,
-        records_read: int = None,
-        records_written: int = None,
-        error_message: str = None,
-        error_stack_trace: str = None,
-        files_ingested: str = None,
-        file_size_bytes: int = None
-    ) -> str:
-        """
-        Salva o log completo de execução no final do processamento.
-        Usa o IngestionLogManager existente para evitar duplicação.
-        
-        Args:
-            config: Configuração da ingestão
-            execution_status: Status final ('concluido_sucesso' ou 'concluido_erro')
-            start_time: Horário de início da execução
-            end_time: Horário de fim da execução
-            records_read: Quantidade de registros lidos
-            records_written: Quantidade de registros gravados
-            error_message: Mensagem de erro (se houver)
-            error_stack_trace: Stack trace do erro (se houver)
-            files_ingested: Nomes dos arquivos ingeridos
-            file_size_bytes: Tamanho dos arquivos em bytes
-            
-        Returns:
-            ID único da execução
-        """
-        import uuid
-        from datetime import datetime
-        
-        execution_id = str(uuid.uuid4())
-        
-        try:
-            # Usar o IngestionLogManager existente (ele usa dino_ingestion_logs)
-            log_entry = IngestionLogEntry(
-                execution_id=execution_id,
-                table_name=config.table_name,
-                schema_name=config.schema_name,
-                catalog_name=config.catalog_name,
-                source_path=config.source_path,
-                execution_status=execution_status,
-                start_time=start_time,
-                end_time=end_time,
-                execution_duration_seconds=(end_time - start_time).total_seconds(),
-                records_read=records_read,
-                records_written=records_written,
-                file_format=config.file_extension,
-                ingestion_type=config.type_run,
-                error_message=error_message,
-                error_stack_trace=error_stack_trace[:1000] if error_stack_trace else None,
-                files_ingested=files_ingested,
-                file_size_bytes=file_size_bytes
-            )
-            
-            # Tentar inserir usando o log_manager (usa dino_ingestion_logs)
-            try:
-                self.log_manager._insert_log_entry(log_entry)
-                logger.info(f"✅ Log salvo na tabela dino_ingestion_logs")
-                logger.info(f"📋 Execution ID: {execution_id}")
-                logger.info(f"📊 Status: {execution_status}")
-                logger.info(f"⏱️ Duração: {log_entry.execution_duration_seconds:.2f}s")
-                return execution_id
-                
-            except Exception as table_error:
-                logger.warning(f"⚠️ Falha ao salvar na tabela Unity Catalog: {str(table_error)}")
-                
-                # Fallback para logging estruturado simples (LOG BONITINHO)
-                log_bonitinho = {
-                    "execution_id": execution_id,
-                    "table": config.table_name,
-                    "schema": config.schema_name,
-                    "catalog": config.catalog_name,
-                    "status": execution_status,
-                    "duracao": f"{log_entry.execution_duration_seconds:.2f}s",
-                    "registros_lidos": records_read or 0,
-                    "registros_gravados": records_written or 0,
-                    "timestamp": end_time.isoformat(),
-                    "mensagem": f"Ingestão {execution_status}. {records_read or 0} registros processados."
-                }
-                
-                logger.info("=" * 80)
-                logger.info("🎯 LOG BONITINHO DA INGESTÃO")
-                logger.info("=" * 80)
-                for key, value in log_bonitinho.items():
-                    logger.info(f"📋 {key}: {value}")
-                logger.info("=" * 80)
-                
-                return execution_id
-                
-        except Exception as main_error:
-            logger.error(f"❌ Erro crítico no save_ingestion_log: {str(main_error)}")
-            return execution_id
-
     def get_ingestion_history(
         self, 
         catalog_name: str, 

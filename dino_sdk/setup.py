@@ -25,8 +25,8 @@ def read_readme():
 
 setup(
     name="dino-sdk",
-    version="2.3.3",  # ✅ Versão atualizada - Logs detalhados para debug do erro as_dict
-    description="🦕 DINO SDK - Data Ingestion SDK for Databricks with Unity Catalog - v2.3.3 com logs debug detalhados",
+    version='2.6.4',
+    description='Correção crítica: métodos duplicados removidos, tabela Unity Catalog sempre tenta criar, fallback robusto para logging local',
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     author="Data Master Team",

@@ -19,6 +19,13 @@ from databricks.sdk.service.jobs import (
 # Usando apenas dicionários para máxima compatibilidade com Databricks SDK
 # Removidos todos os imports de classes que serão substituídas por dicionários
 
+# ✅ NOVO: Import schema_manager para criar diretórios no volume
+try:
+    from .schema_manager import SchemaManager
+except ImportError:
+    # Fallback para importação direta se estiver sendo executado como módulo independente
+    from schema_manager import SchemaManager
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -45,7 +52,7 @@ class DinoWorkflowConfig:
     # Configurações do cluster (para job_cluster)
     existing_cluster_id: Optional[str] = None  # ✅ Suporte a cluster existente (opcional)
     node_type_id: str = "Standard_F4"  # ✅ Node type para job_cluster
-    spark_version: str = "17.1.x-scala2.13"   # ✅ Spark version para job_cluster
+    spark_version: str = "16.4.x-scala2.13"   # ✅ Spark version para job_cluster
     autotermination_minutes: int = 10  # ✅ Auto-terminate para job_cluster
     single_node: bool = True  # ✅ Single node cluster por padrão
     
@@ -196,6 +203,11 @@ class DinoWorkflowManager:
             # Remover job existente se houver
             self._delete_existing_job(config.job_name)
             
+            # ✅ NOVO: Criar diretório no volume para jobs com file_arrival
+            # if config.is_automated and config.file_arrival_url:
+            self.logger.info("📁 Criando diretório da tabela no volume RAW")
+            self._create_volume_directory_for_file_arrival(config)
+            
             # Comentar job_settings antigo - usando nova implementação com ClusterSpec
             # job_settings = self._build_job_settings(config)
             
@@ -206,7 +218,7 @@ class DinoWorkflowManager:
             
             try:
                 from databricks.sdk.service.jobs import Task, NotebookTask, Source, JobSettings as Job, TriggerSettings, FileArrivalTriggerConfiguration, PauseStatus,NotebookTask
-                from databricks.sdk.service.compute import ClusterSpec
+                from databricks.sdk.service.compute import ClusterSpec, Library
 
                 # ✅ Se tem file arrival, usar SEU CÓDIGO EXATO - apenas substituir valores
                 if config.file_arrival_url:
@@ -247,9 +259,14 @@ class DinoWorkflowManager:
                     #                                 "source_path": f"/Volumes/{config.catalog_name}/{config.schema_name}/raw/"
                     #                             })
 
+                    libraries = Library(
+                                whl="/Workspace/dino/dino_sdk.whl"
+                    )
+
                     task = Task(
                         task_key="dino_ingestion_task",
                         new_cluster=job_cluster,
+                        libraries=[libraries],
                         notebook_task=NotebookTask(
                             notebook_path=config.notebook_path,
                             source=Source.WORKSPACE,
@@ -304,6 +321,9 @@ class DinoWorkflowManager:
                     task = Task(
                         task_key="dino_ingestion_task",
                         new_cluster=job_cluster,
+                        libraries=[{
+                            "whl": "/Workspace/dino/dino_sdk-2.4.0-py3-none-any.whl",
+                        }],
                         notebook_task=NotebookTask(
                             notebook_path=config.notebook_path,
                             source=Source.WORKSPACE,
@@ -406,6 +426,62 @@ class DinoWorkflowManager:
                     break
         except Exception as e:
             self.logger.warning(f"⚠️ Erro ao remover job existente: {e}")
+    
+    def _create_volume_directory_for_file_arrival(self, config: DinoWorkflowConfig) -> None:
+        """
+        Cria o diretório da tabela no volume quando o job tem file_arrival habilitado
+        
+        Este método garante que existe um diretório específico para a tabela no volume,
+        onde os arquivos serão depositados e monitorados pelo file_arrival trigger.
+        
+        Args:
+            config: Configuração do workflow com informações da tabela e volume
+        """
+        try:
+            self.logger.info(f"📁 Criando diretório no volume RAW: {config.table_name}")
+            
+            # Construir o path do diretório no volume
+            # Formato: /Volumes/{catalog}/{schema}/raw/{table_name}/
+            volume_directory_path = f"/Volumes/{config.catalog_name}/{config.schema_name}/raw/{config.table_name}"
+            
+            self.logger.info(f"🎯 Path do diretório: {volume_directory_path}")
+            
+            # Usar WorkspaceClient para executar comando Python no workspace
+            # Isso simula a execução de dbutils.fs.mkdirs() no Databricks
+            try:
+                # Tentar usar a API do Databricks para criar diretório
+                from databricks.sdk.service.workspace import Language
+                
+                # Código Python para criar diretório usando dbutils
+#                 create_directory_code = f"""
+# # Criar diretório no volume se não existir
+# try:
+#     dbutils.fs.mkdirs("{volume_directory_path}")
+#     print(f"✅ Diretório criado: {volume_directory_path}")
+# except Exception as e:
+#     print(f"⚠️ Diretório pode já existir ou erro: {{e}}")
+# """           
+                self.client.dbfs.mkdirs(volume_directory_path)
+                
+                # Executar o código através da API do workspace (se possível)
+                # Por enquanto, apenas logar que o diretório deveria ser criado
+                self.logger.info(f"📋 Comando para criar diretório: dbfs.mkdirs('{volume_directory_path}')")
+                
+                self.logger.info(f"✅ Diretório configurado para criação: {volume_directory_path}")
+                
+            except Exception as api_error:
+                self.logger.warning(f"⚠️ Não foi possível criar diretório via API: {api_error}")
+                self.logger.info("💡 O diretório será criado automaticamente quando o primeiro arquivo chegar")
+            
+            # Atualizar o file_arrival_url para apontar para o diretório específico da tabela
+            if not config.file_arrival_url or config.file_arrival_url.endswith("/raw/"):
+                config.file_arrival_url = volume_directory_path
+                self.logger.info(f"🔗 File arrival URL atualizada: {config.file_arrival_url}")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao configurar diretório no volume: {e}")
+            self.logger.warning(f"⚠️ Continuando criação do job - diretório será criado automaticamente no primeiro file arrival")
+            # Não falha a criação do job - apenas registra o erro
     
     def _build_job_settings(self, config: DinoWorkflowConfig) -> Dict[str, Any]:
         """Constrói as configurações do job como dicionário"""
@@ -663,7 +739,7 @@ def create_dino_workflow(
     file_arrival_url: Optional[str] = None,
     existing_cluster_id: Optional[str] = None,  # ✅ Cluster existente (opcional)
     node_type_id: str = "Standard_F4",  # ✅ Para job_cluster
-    spark_version: str = "17.1.x-scala2.13",  # ✅ Para job_cluster
+    spark_version: str = "16.4.x-scala2.13",  # ✅ Para job_cluster
     autotermination_minutes: int = 10,  # ✅ Para job_cluster
     single_node: bool = True,  # ✅ Para job_cluster
     **kwargs
