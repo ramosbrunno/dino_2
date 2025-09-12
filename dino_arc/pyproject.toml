@@ -1,0 +1,164 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dino-arc"
+version = "1.0.0"
+description = "Complete Azure Infrastructure Creator with Databricks Premium and Unity Catalog"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Bruno Ramos", email = "bruno.ramos@example.com"},
+]
+maintainers = [
+    {name = "Bruno Ramos", email = "bruno.ramos@example.com"},
+]
+keywords = ["azure", "databricks", "terraform", "infrastructure", "unity-catalog", "cli"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "azure-identity",
+    "azure-mgmt-resource",
+    "azure-mgmt-storage", 
+    "azure-mgmt-keyvault",
+    "python-terraform>=0.10.1",
+    "requests>=2.28.0",
+    "click>=8.0.0",
+    "pyyaml>=6.0",
+    "coverage>=6.0",
+    "unittest-xml-reporting>=3.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ramosbrunno/dino_2"
+Documentation = "https://github.com/ramosbrunno/dino_2/blob/main/dino_arc/README.md"
+Repository = "https://github.com/ramosbrunno/dino_2.git"
+"Bug Tracker" = "https://github.com/ramosbrunno/dino_2/issues"
+Changelog = "https://github.com/ramosbrunno/dino_2/blob/main/dino_arc/CHANGELOG.md"
+
+[project.scripts]
+dino-arc = "cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "coverage>=6.0",
+    "unittest-xml-reporting>=3.2.0",
+]
+
+[tool.setuptools]
+packages = ["src"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = [
+    "terraform/*.tf",
+    "terraform/**/*.tf", 
+    "terraform/*.tfvars.example",
+    "databricks_config/*.py",
+    "databricks_config/*.sh",
+    "databricks_config/*.bat",
+    "tests/*.py",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--tb=short",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "terraform.*",
+    "azure.*",
+]
+ignore_missing_imports = true

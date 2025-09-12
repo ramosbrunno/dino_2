@@ -700,13 +700,49 @@ class IngestionLogManager:
     """
     Gerenciador de logs de execução de ingestão.
     
-    Cria uma tabela de logs no mesmo schema para registrar todas as execuções
-    de ingestão com detalhes completos.
+    Suporta gravação tanto no Unity Catalog (Databricks) quanto no Azure SQL Database.
     """
     
-    def __init__(self, spark: SparkSession):
+    def __init__(
+        self, 
+        spark: SparkSession,
+        # Configurações Azure SQL (opcional)
+        azure_sql_server: str = None,
+        azure_sql_database: str = None,
+        azure_sql_username: str = None,
+        azure_sql_password: str = None,
+        azure_sql_table: str = "dbo.dino_ingestion_logs"
+    ):
         self.spark = spark
         self.logger = logging.getLogger(f"{__name__}.LogManager")
+        
+        # Configurações Azure SQL
+        self.azure_sql_server = azure_sql_server
+        self.azure_sql_database = azure_sql_database
+        self.azure_sql_username = azure_sql_username
+        self.azure_sql_password = azure_sql_password
+        self.azure_sql_table = azure_sql_table
+        
+        # Determinar modo de operação
+        self.use_azure_sql = all([
+            azure_sql_server, azure_sql_database, 
+            azure_sql_username, azure_sql_password
+        ])
+        
+        if self.use_azure_sql:
+            self.logger.info("🔗 Azure SQL configurado para logging")
+            self._setup_azure_sql_connection()
+        else:
+            self.logger.info("🦕 Unity Catalog configurado para logging")
+    
+    def _setup_azure_sql_connection(self):
+        """Configura conexão com Azure SQL"""
+        self.jdbc_url = f"jdbc:sqlserver://{self.azure_sql_server}.database.windows.net:1433;database={self.azure_sql_database}"
+        self.connection_properties = {
+            "user": self.azure_sql_username,
+            "password": self.azure_sql_password,
+            "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
+        }
     
     def _get_log_table_name(self, catalog_name: str, schema_name: str) -> str:
         """Retorna o nome completo da tabela de logs"""
@@ -1268,7 +1304,92 @@ class IngestionLogManager:
     
     def _insert_log_entry(self, log_entry: IngestionLogEntry) -> None:
         """
-        Insere uma entrada de log na tabela.
+        Insere uma entrada de log na tabela (Unity Catalog ou Azure SQL).
+        """
+        try:
+            if self.use_azure_sql:
+                self._insert_log_entry_azure_sql(log_entry)
+            else:
+                self._insert_log_entry_unity_catalog(log_entry)
+                
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao inserir log: {str(e)}")
+            # Fallback para logging local
+            try:
+                self._log_entry_locally(log_entry)
+            except Exception as fallback_error:
+                self.logger.error(f"❌ Erro no fallback de inserção de log: {str(fallback_error)}")
+    
+    def _insert_log_entry_azure_sql(self, log_entry: IngestionLogEntry) -> None:
+        """
+        Insere entrada de log no Azure SQL Database.
+        """
+        try:
+            from pyspark.sql.types import StructType, StructField, StringType, TimestampType, LongType, DoubleType
+            from datetime import datetime
+            
+            self.logger.info(f"💾 Inserindo log no Azure SQL: {self.azure_sql_table}")
+            
+            # Preparar dados para inserção no Azure SQL
+            insert_data = [
+                (
+                    log_entry.execution_id,
+                    log_entry.table_name,
+                    log_entry.schema_name,
+                    log_entry.catalog_name,
+                    log_entry.source_path,
+                    log_entry.execution_status,
+                    log_entry.start_time,
+                    log_entry.end_time,
+                    log_entry.execution_duration_seconds,
+                    log_entry.records_read,
+                    log_entry.records_written,
+                    log_entry.file_format,
+                    log_entry.ingestion_type,
+                    log_entry.message,
+                    log_entry.files_ingested,
+                    log_entry.file_size_bytes,
+                    str(log_entry.additional_metadata) if log_entry.additional_metadata else ""
+                )
+            ]
+            
+            # Schema para Azure SQL (sem created_at que não existe na tabela)
+            insert_schema = StructType([
+                StructField("execution_id", StringType(), False),
+                StructField("table_name", StringType(), False),
+                StructField("schema_name", StringType(), False),
+                StructField("catalog_name", StringType(), False),
+                StructField("source_path", StringType(), True),
+                StructField("execution_status", StringType(), False),
+                StructField("start_time", TimestampType(), False),
+                StructField("end_time", TimestampType(), True),
+                StructField("execution_duration_seconds", DoubleType(), True),
+                StructField("records_read", LongType(), True),
+                StructField("records_written", LongType(), True),
+                StructField("file_format", StringType(), True),
+                StructField("ingestion_type", StringType(), True),
+                StructField("message", StringType(), True),
+                StructField("files_ingested", StringType(), True),
+                StructField("file_size_bytes", LongType(), True),
+                StructField("additional_metadata", StringType(), True)
+            ])
+            
+            insert_df = self.spark.createDataFrame(insert_data, insert_schema)
+            
+            # Escrever no Azure SQL usando JDBC
+            (insert_df.write
+             .mode("append")
+             .jdbc(url=self.jdbc_url, table=self.azure_sql_table, properties=self.connection_properties))
+            
+            self.logger.info(f"✅ Log inserido com sucesso no Azure SQL: {self.azure_sql_table}")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Erro ao inserir no Azure SQL: {str(e)}")
+            raise
+    
+    def _insert_log_entry_unity_catalog(self, log_entry: IngestionLogEntry) -> None:
+        """
+        Insere entrada de log no Unity Catalog (método original).
         """
         try:
             # Verificar se Unity Catalog está habilitado
@@ -1334,12 +1455,8 @@ class IngestionLogManager:
             insert_df.write.format("delta").mode("append").saveAsTable(log_table_name)
             
         except Exception as e:
-            self.logger.error(f"❌ Erro ao inserir log: {str(e)}")
-            # Fallback para logging local
-            try:
-                self._log_entry_locally(log_entry)
-            except Exception as fallback_error:
-                self.logger.error(f"❌ Erro no fallback de inserção de log: {str(fallback_error)}")
+            self.logger.error(f"❌ Erro ao inserir no Unity Catalog: {str(e)}")
+            raise
     
     def _log_entry_locally(self, log_entry: IngestionLogEntry) -> None:
         """
@@ -1374,12 +1491,26 @@ class IngestionEngine:
     Motor principal de ingestão de dados.
     """
     
-    def __init__(self, spark: SparkSession = None):
+    def __init__(
+        self, 
+        spark: SparkSession = None,
+        # Configurações Azure SQL para logging (opcional)
+        azure_sql_server: str = None,
+        azure_sql_database: str = None,
+        azure_sql_username: str = None,
+        azure_sql_password: str = None,
+        azure_sql_table: str = "dbo.dino_ingestion_logs"
+    ):
         """
         Inicializa o motor de ingestão.
         
         Args:
             spark: Sessão Spark (opcional, será detectada automaticamente se não fornecida)
+            azure_sql_server: Nome do servidor Azure SQL (ex: 'data-master-dev-sql-9873')
+            azure_sql_database: Nome do database Azure SQL (ex: 'data-master-dev-db-logs')
+            azure_sql_username: Usuário do Azure SQL (ex: 'sqladmin')
+            azure_sql_password: Senha do Azure SQL
+            azure_sql_table: Nome da tabela no Azure SQL (default: 'dbo.dino_ingestion_logs')
         """
         if spark is None:
             # Tentar obter sessão Spark ativa
@@ -1396,9 +1527,20 @@ class IngestionEngine:
             
         self.config_validator = ConfigValidator()
         self.schema_manager = SchemaManager(self.spark)
-        self.log_manager = IngestionLogManager(self.spark)
+        self.log_manager = IngestionLogManager(
+            self.spark,
+            azure_sql_server=azure_sql_server,
+            azure_sql_database=azure_sql_database,
+            azure_sql_username=azure_sql_username,
+            azure_sql_password=azure_sql_password,
+            azure_sql_table=azure_sql_table
+        )
         
-        logger.info("🦕 DINO SDK IngestionEngine inicializado com sistema de logging")
+        # Log informativo sobre o modo de logging
+        if self.log_manager.use_azure_sql:
+            logger.info(f"🦕 DINO SDK IngestionEngine inicializado com logging no Azure SQL: {azure_sql_server}.database.windows.net")
+        else:
+            logger.info("🦕 DINO SDK IngestionEngine inicializado com logging no Unity Catalog")
     
     def ingest(self, config: IngestionConfig) -> Dict[str, Any]:
         """

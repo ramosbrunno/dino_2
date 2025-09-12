@@ -41,54 +41,13 @@ tags = {
 }
 
 # ========================
-# Configurações do Databricks (Opcional)
+# Exemplos de Configuração
 # ========================
 
-# Habilitar criação do Azure Databricks Workspace
-enable_databricks = true
-
-# SKU do Databricks (trial, standard, premium)
-databricks_sku = "standard"
-
-# Permitir acesso público ao workspace
-databricks_public_network_access = true
-
-# Usar Secure Cluster Connectivity (sem IP público)
-databricks_no_public_ip = false
-
-# Armazenar secrets do Databricks no Key Vault
-databricks_store_secrets = true
-
-# ========================
-# Configurações do SQL Database para Dino SDK Logging (Opcional)
-# ========================
-
-# Habilitar criação do Azure SQL Database para logs do Dino SDK
-enable_sql_database = false  # Mude para true se quiser SQL Database
-
-# Username do administrador SQL (senha é gerada automaticamente)
-sql_admin_username = "sqladmin"
-
-# SKU do banco de dados de logs
-sql_database_sku = "Basic"  # Basic, S1, S2, P1, etc.
-
-# Permitir acesso público ao SQL Server
-sql_enable_public_access = true
-
-# Permitir acesso de serviços Azure
-sql_enable_azure_services_access = true
-
-# Criar Private Endpoint para o SQL Server
-sql_enable_private_endpoint = false
-
-# Regras de firewall customizadas (opcional)
-sql_firewall_rules = [
-  # {
-  #   name     = "AllowOfficeIP"
-  #   start_ip = "203.0.113.0"
-  #   end_ip   = "203.0.113.255"
-  # }
-]
+# Para desenvolvimento:
+# projeto = "meu-projeto"
+# ambiente = "dev"
+# location = "East US"
 # keyvault_sku_name = "standard"
 # keyvault_purge_protection_enabled = false
 

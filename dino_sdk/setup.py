@@ -25,7 +25,7 @@ def read_readme():
 
 setup(
     name="dino-sdk",
-    version='2.6.4',
+    version='2.7.1',
     description='Correção crítica: métodos duplicados removidos, tabela Unity Catalog sempre tenta criar, fallback robusto para logging local',
     long_description=read_readme(),
     long_description_content_type="text/markdown",

@@ -1,0 +1,27 @@
+🔧 SOLUÇÃO RÁPIDA PARA SEU ERRO DATABRICKS:
+
+Substitua esta linha problemática:
+❌ is_valid = validator.validate_basic_config(config)
+
+Por estas linhas corretas:
+✅ from dino_sdk import IngestionConfig
+✅ ingestion_config = IngestionConfig(
+       source_path=config["source_path"],
+       catalog_name=config["target_catalog"], 
+       schema_name=config["target_schema"],
+       table_name=config["target_table"],
+       file_extension="csv"
+   )
+✅ validation_result = validator.validate_ingestion_config(ingestion_config)
+✅ print("✅ Validation completed:", validation_result)
+
+EXPLICAÇÃO:
+- ConfigValidator.validate_basic_config() NÃO EXISTE
+- Use ConfigValidator.validate_ingestion_config() com IngestionConfig object
+- O método espera um objeto IngestionConfig, não um dicionário
+
+MÉTODOS DISPONÍVEIS NO ConfigValidator:
+- validate_ingestion_config(config: IngestionConfig) 
+- validate_args(required_args: List[str], config: Dict[str, Any])
+
+🎉 Com essa correção seu notebook Databricks funcionará perfeitamente!

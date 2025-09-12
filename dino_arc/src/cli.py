@@ -1,52 +1,14 @@
 import argparse
 import os
+import json
 import time
-import subprocess
-import sys
-from .sdk.azure_auth import AzureAuth
-from .sdk.terraform_executor import TerraformExecutor
-from .databricks_config.unity_catalog_setup import DatabricksConfigurator
+from sdk.azure_auth import AzureAuth
+from sdk.terraform_executor import TerraformExecutor
+from databricks_config.unity_catalog_setup import DatabricksConfigurator
 
-def enable_serverless_via_integrated_sdk(workspace_url, client_id, client_secret, tenant_id):
-    """
-    Habilita Serverless Compute usando a nova classe ServerlessEnabler
-    """
-    print("\n🚀 Habilitando Serverless via Databricks SDK integrado...")
-    
-    try:
-        # Import da nova classe
-        from .databricks_config.enable_serverless import enable_serverless_for_workspace
-        
-        # Usar a função principal da nova classe
-        success = enable_serverless_for_workspace(
-            workspace_url=workspace_url,
-            client_id=client_id,
-            client_secret=client_secret,
-            tenant_id=tenant_id
-        )
-        
-        if success:
-            print("🎉 Serverless Compute habilitado com sucesso!")
-            return True
-        else:
-            print("⚠️ Serverless Compute pode necessitar configuração manual")
-            print("📋 Consulte as instruções exibidas acima")
-            return False
-            
-    except ImportError:
-        print("❌ Módulo ServerlessEnabler não está disponível")
-        return False
-    except Exception as e:
-        import traceback
-        print(f"❌ Erro ao configurar Serverless via nova classe:")
-        print(f"   Erro: {str(e)}")
-        print(f"   Traceback: {traceback.format_exc()}")
-        return False
-
-def configure_databricks_environment(projeto, ambiente, location, terraform_executor, client_id, client_secret, tenant_id):
+def configure_databricks_environment(projeto, ambiente, location, terraform_executor):
     """
     Configura automaticamente o Databricks Unity Catalog e Serverless após o deploy
-    Integra automação via Databricks SDK para configuração completa
     """
     print("\n🔧 Configurando Databricks Unity Catalog e Serverless...")
     
@@ -63,24 +25,20 @@ def configure_databricks_environment(projeto, ambiente, location, terraform_exec
         workspace_url = outputs.get('databricks_workspace_url', {}).get('value')
         workspace_id = outputs.get('databricks_workspace_id', {}).get('value')
         unity_catalog_storage_root = outputs.get('unity_catalog_storage_root', {}).get('value')
+        databricks_token = outputs.get('databricks_access_token', {}).get('value')
         
-        if not all([workspace_url, workspace_id, unity_catalog_storage_root]):
+        if not all([workspace_url, workspace_id, unity_catalog_storage_root, databricks_token]):
             print("❌ Outputs do Terraform incompletos para configuração do Databricks")
             print(f"   workspace_url: {'✅' if workspace_url else '❌'}")
             print(f"   workspace_id: {'✅' if workspace_id else '❌'}")
             print(f"   storage_root: {'✅' if unity_catalog_storage_root else '❌'}")
+            print(f"   access_token: {'✅' if databricks_token else '❌'}")
             return False
         
         print(f"✅ Conectando ao Databricks: {workspace_url}")
-        print("🔐 Usando autenticação Service Principal...")
         
-        # Configurar Databricks com Service Principal
-        configurator = DatabricksConfigurator(
-            workspace_url=workspace_url,
-            client_id=client_id,
-            client_secret=client_secret,
-            tenant_id=tenant_id
-        )
+        # Configurar Databricks
+        configurator = DatabricksConfigurator(workspace_url, databricks_token)
         
         # Executar configuração completa
         result = configurator.setup_complete_environment(
@@ -107,85 +65,85 @@ def configure_databricks_environment(projeto, ambiente, location, terraform_exec
             if result.get('warehouse'):
                 print(f"   🏭 SQL Warehouse: {result['warehouse'].get('name', f'{projeto}-{ambiente}-warehouse')}")
             
-            print("   ⚡ Serverless Compute: Habilitado via configuração tradicional")
-            
-            # Tentar automação avançada via SDK
-            print("\n🚀 Aplicando automação avançada via Databricks SDK...")
-            sdk_success = enable_serverless_via_integrated_sdk(
-                workspace_url, client_id, client_secret, tenant_id
-            )
-            
-            if not sdk_success:
-                print("⚠️  Configuração tradicional OK, mas automação SDK falhou")
-                print("   Serverless ainda está habilitado via método tradicional")
-            
+            print("   ⚡ Serverless Compute: Habilitado")
             return True
         else:
-            print(f"\n⚠️  Erro na configuração do Databricks: {result}")
+            print(f"❌ Erro na configuração do Databricks: {result.get('error', 'Erro desconhecido')}")
             return False
             
     except Exception as e:
-        import traceback
-        print(f"❌ Erro na configuração do Databricks:")
-        print(f"   Erro: {str(e)}")
-        print(f"   Traceback: {traceback.format_exc()}")
+        print(f"❌ Erro durante configuração do Databricks: {str(e)}")
         return False
-
 
 def ensure_terraform_initialized(terraform_executor):
     """
-    Garante que o Terraform está inicializado
+    Garante que o Terraform está inicializado antes de executar comandos
     """
     print("🔧 Verificando inicialização do Terraform...")
-    if not terraform_executor.is_initialized():
-        print("🔄 Inicializando Terraform...")
+    
+    # Verificar se já foi inicializado (existe .terraform)
+    import os
+    terraform_dir = os.path.join(os.path.dirname(__file__), "terraform")
+    terraform_state_dir = os.path.join(terraform_dir, ".terraform")
+    
+    if not os.path.exists(terraform_state_dir):
+        print("📦 Terraform não inicializado. Executando init...")
         result = terraform_executor.init()
-        if result.returncode != 0:
-            print(f"❌ Erro ao inicializar Terraform: {result.stderr}")
+        if result.returncode == 0:
+            print("✅ Terraform inicializado com sucesso!")
+            return True
+        else:
+            print("❌ Erro ao inicializar Terraform:")
+            print(result.stderr)
             return False
-        print("✅ Terraform inicializado com sucesso!")
     else:
         print("✅ Terraform já inicializado!")
-    return True
-
+        return True
 
 def main():
-    parser = argparse.ArgumentParser(description='Dino Arc - Automação de Infraestrutura Azure')
+    parser = argparse.ArgumentParser(description='Dino ARC CLI - Complete Azure Infrastructure Creator')
     
-    # Argumentos de autenticação Azure (sempre obrigatórios)
-    parser.add_argument('--client-id', required=True, help='Service Principal Client ID')
-    parser.add_argument('--client-secret', required=True, help='Service Principal Client Secret')
+    # Argumentos de autenticação Azure
+    parser.add_argument('--client-id', required=True, help='Azure Client ID')
+    parser.add_argument('--client-secret', required=True, help='Azure Client Secret')
     parser.add_argument('--tenant_id', required=True, help='Azure Tenant ID')
     parser.add_argument('--subscription-id', required=True, help='Azure Subscription ID')
     
-    # Argumentos do projeto
-    parser.add_argument('--action', required=True, choices=['plan', 'apply', 'destroy'], help='Ação a ser executada')
-    parser.add_argument('--projeto', required=True, help='Nome do projeto')
-    parser.add_argument('--ambiente', default='dev', help='Ambiente (dev/staging/prod)')
-    parser.add_argument('--location', required=True, help='Região Azure')
+    # Ação do Terraform
+    parser.add_argument('--action', choices=['init', 'plan', 'apply', 'destroy'], required=True, 
+                       help='Ação que será executada no script Terraform (init é opcional - executado automaticamente)')
     
+    # Parâmetros principais (simplificados)
+    parser.add_argument('--projeto', type=str, required=True,
+                       help='Nome do projeto (será usado como base para todos os recursos)')
+    parser.add_argument('--ambiente', type=str, choices=['dev', 'staging', 'prod'], default='dev',
+                       help='Ambiente (dev, staging, prod) - padrão: dev')
+    parser.add_argument('--location', type=str, default='East US',
+                       help='Localização do Azure (padrão: East US)')
+
     args = parser.parse_args()
+
+    # Validação: projeto é obrigatório para todas as ações exceto init
+    if args.action in ['plan', 'apply', 'destroy'] and not args.projeto:
+        parser.error(f"--projeto é obrigatório para a ação '{args.action}'")
+
+    # Autenticação Azure
+    azure_auth = AzureAuth(args.client_id, args.client_secret, args.tenant_id, args.subscription_id)
+    azure_auth.authenticate()
+
+    # Executor Terraform
+    terraform_executor = TerraformExecutor()
+
+    if args.action == 'init':
+        print("🔧 Inicializando Terraform...")
+        result = terraform_executor.init()
+        if result.returncode == 0:
+            print("✅ Terraform inicializado com sucesso!")
+        else:
+            print("❌ Erro ao inicializar Terraform:")
+            print(result.stderr)
     
-    # Configurar autenticação Azure
-    print("🔐 Configurando autenticação Azure via Service Principal...")
-    
-    azure_auth = AzureAuth(
-        client_id=args.client_id,
-        client_secret=args.client_secret,
-        tenant_id=args.tenant_id,
-        subscription_id=args.subscription_id
-    )
-    
-    # Autenticar e configurar variáveis de ambiente automaticamente
-    if not azure_auth.authenticate():
-        print("❌ Falha na autenticação Azure")
-        return
-    
-    # Configurar executor do Terraform
-    terraform_dir = os.path.join(os.path.dirname(__file__), 'terraform')
-    terraform_executor = TerraformExecutor(terraform_dir)
-    
-    if args.action == 'plan':
+    elif args.action == 'plan':
         # Garantir que Terraform está inicializado
         if not ensure_terraform_initialized(terraform_executor):
             return
@@ -252,22 +210,17 @@ def main():
                 args.projeto, 
                 args.ambiente, 
                 args.location, 
-                terraform_executor,
-                args.client_id,
-                args.client_secret,
-                args.tenant_id
+                terraform_executor
             )
             
             if databricks_success:
                 print("\n🎊 Deploy completo finalizado!")
                 print("🚀 Seu ambiente Databricks Premium está pronto para uso:")
                 print(f"   📊 Unity Catalog configurado com arquitetura medallion")
-                print(f"   ⚡ Serverless Compute habilitado via Databricks SDK")
+                print(f"   ⚡ Serverless Compute habilitado")
                 print(f"   🏭 SQL Warehouse Serverless criado")
-                print(f"   🌐 Web Terminal e DBFS Browser habilitados")
                 print(f"   📚 Catalog: {args.projeto}_{args.ambiente}")
                 print(f"   🗂️  Schemas: bronze, silver, gold, workspace")
-                print(f"   🎯 Automação completa via SDK aplicada!")
             else:
                 print("\n⚠️  Infraestrutura criada, mas configuração do Databricks falhou")
                 print("   Você pode executar a configuração manualmente usando os scripts em databricks_config/")
