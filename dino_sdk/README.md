@@ -1,58 +1,173 @@
 # 🦕 DINO SDK v1.2.0
 
-**Data Integration & Operations - SDK Completo para Databricks Unity Catalog**
+**Data Integration & Operations - SDK Enterprise para Databricks Unity Catalog**
+
+Solução completa para automação de pipelines de dados com **AutoLoader**, **Liquid Clustering**, **Unity Catalog** e **gerenciamento inteligente de metadados**.
 
 ---
 
 ## 🎯 **Visão Geral**
 
-O **DINO SDK** é uma solução enterprise completa para ingestão de dados no Databricks Unity Catalog. Oferece funcionalidades avançadas como **AutoLoader**, **Liquid Clustering**, **criação automática de schemas com volumes gerenciados** e **gerenciamento inteligente de metadados**.
+O **DINO SDK** é uma biblioteca Python enterprise-grade desenvolvida especificamente para o **Databricks Unity Catalog**. Oferece automação completa para ingestão de dados, otimização de performance e governança, reduzindo significativamente o tempo de desenvolvimento de pipelines de dados.
 
 ### ✨ **Características Principais**
 
 | Funcionalidade | Descrição | Status |
 |----------------|-----------|--------|
-| 🔄 **AutoLoader Integrado** | Ingestão automática com schema evolution | ✅ Completo |
-| 💎 **Liquid Clustering** | Otimização automática de performance | ✅ Completo |
-| 🏛️ **Unity Catalog** | Suporte completo para governança de dados | ✅ Completo |
-| 📦 **Volumes Gerenciados** | Criação automática de volumes (_checkpoints, _schemas, raw) | ✅ Completo |
-| 🌊 **Streaming & Batch** | Compatível com ambos os modos de processamento | ✅ Completo |
-| ⚡ **CLI Integrada** | Comandos para configuração e gerenciamento | ✅ Completo |
-| 📓 **Notebook Ready** | Funcionalidades específicas para notebooks Databricks | ✅ Completo |
+| 🔄 **AutoLoader Avançado** | Ingestão automática com schema evolution e error handling | ✅ Completo |
+| 💎 **Liquid Clustering** | Otimização automática baseada em padrões de query | ✅ Completo |
+| 🏛️ **Unity Catalog Native** | Integração completa com governança e lineage | ✅ Completo |
+| 📦 **Volumes Inteligentes** | Criação automática e gerenciamento de volumes (_checkpoints, _schemas, raw) | ✅ Completo |
+| 🌊 **Streaming & Batch** | Processamento unificado com failover automático | ✅ Completo |
+| ⚡ **CLI Integrada** | Comandos para deploy, configuração e monitoramento | ✅ Completo |
+| 📓 **Notebook Optimized** | Funcionalidades específicas para ambiente Databricks | ✅ Completo |
+| 🔐 **Enterprise Security** | Integração com Azure Key Vault e RBAC | ✅ Completo |
+| 📊 **Observabilidade** | Logs estruturados e métricas de performance | ✅ Completo |
 
 ---
 
-## 🚀 **Instalação Rápida**
+## 🚀 **Instalação e Deploy**
 
-### **Databricks Notebook** (Recomendado)
+### **🏗️ Pré-requisitos**
+- ✅ Databricks Workspace com **Unity Catalog** habilitado
+- ✅ Volume gerenciado configurado: `/Volumes/main/default/system_files/`
+- ✅ Permissões adequadas no Databricks (Workspace Admin recomendado)
+- ✅ Python 3.8+ (em ambiente local)
+
+### **📦 Build e Upload do Package**
+
+#### **1. Build Local (Desenvolvimento)**
+```bash
+# Clonar repositório
+git clone <repository-url>
+cd dino_sdk
+
+# Criar ambiente virtual
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# ou
+venv\Scripts\activate     # Windows
+
+# Instalar dependências de build
+pip install build wheel setuptools
+
+# Build do package
+python -m build
+```
+
+#### **2. Upload para Databricks**
 ```python
-# Instalar no notebook Databricks
+# No Databricks Notebook - Upload manual do .whl
+# 1. Na interface web: File -> Upload data to DBFS
+# 2. Ou via Databricks CLI:
+
+# Upload via CLI (se configurado)
+databricks fs cp dist/dino_sdk-1.2.0-py3-none-any.whl \
+  dbfs:/Volumes/main/default/system_files/wheels/
+
+# Upload via código no notebook
+# (O arquivo precisa estar disponível no workspace)
+```
+
+#### **3. Upload de Notebooks de Exemplo**
+```python
+# Via Databricks CLI
+databricks workspace import-dir notebooks/ \
+  /Workspace/Shared/dino_sdk_examples/ \
+  --format AUTO
+
+# Ou via interface web:
+# Workspace -> Import -> selecionar pasta notebooks/
+```
+
+### **🔧 Instalação no Databricks**
+
+#### **Método 1: Notebook Individual**
+```python
+# Instalar no notebook atual
 %pip install /Volumes/main/default/system_files/wheels/dino_sdk-1.2.0-py3-none-any.whl --force-reinstall
 
 # Verificar instalação
 import dino_sdk
-print(f"✅ DINO SDK v{dino_sdk.__version__} instalado!")
+print(f"✅ DINO SDK v{dino_sdk.__version__} instalado com sucesso!")
 ```
 
-### **Ambiente Local**
+#### **Método 2: Cluster Library (Recomendado para Produção)**
+```python
+# 1. Cluster Configuration -> Libraries -> Install New
+# 2. Library Source: Upload
+# 3. Upload: /Volumes/main/default/system_files/wheels/dino_sdk-1.2.0-py3-none-any.whl
+# 4. Install
+
+# Verificar em qualquer notebook do cluster
+import dino_sdk
+dino_sdk.verify_installation()
+```
+
+#### **Método 3: Ambiente Local (Desenvolvimento)**
 ```bash
-# Instalar localmente
+# Para desenvolvimento e testes locais
 pip install dist/dino_sdk-1.2.0-py3-none-any.whl
 
-# Ou para desenvolvimento
+# Ou instalação em modo desenvolvimento
 pip install -e .
+```
+
+### **📋 Procedimentos de Deploy Enterprise**
+
+#### **Deploy em Múltiplos Ambientes**
+```bash
+# Configurar ambientes via Databricks CLI
+databricks configure --token
+
+# Deploy para DEV
+databricks fs cp dist/dino_sdk-1.2.0-py3-none-any.whl \
+  dbfs:/Volumes/main/default/system_files/wheels/dino_sdk_dev.whl
+
+# Deploy para PROD (com tag de versão)
+databricks fs cp dist/dino_sdk-1.2.0-py3-none-any.whl \
+  dbfs:/Volumes/main/default/system_files/wheels/dino_sdk_v1.2.0.whl
+```
+
+#### **Gerenciamento de Versões**
+```python
+# Verificar versão instalada em runtime
+import dino_sdk
+print(f"Versão atual: {dino_sdk.__version__}")
+
+# Verificar compatibilidade
+dino_sdk.check_compatibility(spark_version="3.4.0", dbr_version="13.3")
+
+# Lista de versões disponíveis no workspace
+%fs ls /Volumes/main/default/system_files/wheels/
+```
+
+#### **Rollback e Versionamento**
+```python
+# Manter versões anteriores para rollback
+# Estrutura recomendada:
+# /Volumes/main/default/system_files/wheels/
+#   ├── current/dino_sdk.whl (link simbólico para versão atual)
+#   ├── v1.2.0/dino_sdk-1.2.0-py3-none-any.whl
+#   ├── v1.1.0/dino_sdk-1.1.0-py3-none-any.whl
+#   └── backup/[versões antigas]
+
+# Rollback para versão anterior
+%pip uninstall dino_sdk -y
+%pip install /Volumes/main/default/system_files/wheels/v1.1.0/dino_sdk-1.1.0-py3-none-any.whl
+dbutils.library.restartPython()
 ```
 
 ---
 
 ## 💡 **Guia de Uso Completo**
 
-### **1. Criação de Schema com Volumes (Setup Inicial)**
+### **1. Setup Inicial - Schema e Volumes**
 
 ```python
 from dino_sdk.schema_manager import ensure_schema_simple
 
-# ⚡ MÉTODO RECOMENDADO - Cria schema + volumes automaticamente
+# ⚡ SETUP AUTOMÁTICO - Cria schema + volumes de uma vez
 result = ensure_schema_simple(spark, "main", "bronze")
 
 if result['success']:
@@ -61,52 +176,311 @@ if result['success']:
     print(f"📦 Volumes existentes: {result['volumes_existing']}")
     
     # Volumes criados automaticamente:
-    # - main.bronze._checkpoints (para checkpoints do AutoLoader)
-    # - main.bronze._schemas (para schemas do AutoLoader)  
+    # - main.bronze._checkpoints (para AutoLoader checkpoints)
+    # - main.bronze._schemas (para schema evolution)  
     # - main.bronze.raw (para dados raw/landing)
+    # - main.bronze.processed (para dados processados)
 else:
     print("❌ Erro na criação:")
     for error in result['errors']:
         print(f"   • {error}")
 ```
 
-### **2. Ingestão de Dados (Motor Principal)**
+### **2. Ingestão Básica - AutoLoader + Liquid Clustering**
 
 ```python
 from dino_sdk import IngestionEngine, IngestionConfig
 
-# 📋 CONFIGURAÇÃO COMPLETA
+# 📋 CONFIGURAÇÃO SIMPLIFICADA
 config = IngestionConfig(
-    # 📁 Dados de origem
-    source_path="/mnt/raw-data/sales/",           # Caminho dos dados
-    file_extension="csv",                         # csv, json, parquet
+    # 📁 Fonte de dados
+    source_path="/Volumes/main/bronze/raw/sales/",
+    file_extension="csv",
     
     # 🎯 Destino Unity Catalog
-    catalog_name="main",                          # Catálogo
-    schema_name="bronze",                         # Schema
-    table_name="sales",                           # Tabela
+    catalog_name="main",
+    schema_name="bronze", 
+    table_name="sales_data",
     
-    # ⚡ Performance e Otimização
-    liquid_clustering=True,                       # Ativar Liquid Clustering
-    clustering_columns=["region", "date"],        # Colunas para clustering
+    # 💎 Otimização automática
+    enable_liquid_clustering=True,
+    clustering_columns=["date", "region"],
     
-    # 🔧 AutoLoader
-    schema_evolution_mode="rescue",               # rescue, addNewColumns, strict
-    rescue_data_column="_rescued_data",           # Coluna para dados problemáticos
-    
-    # 📊 Processamento
-    type_run="streaming"                          # streaming ou batch
+    # 🔄 Modo de processamento
+    mode="batch"  # ou "streaming"
 )
 
-# 🚀 EXECUÇÃO DA INGESTÃO
-engine = IngestionEngine(config, spark)
+# 🚀 EXECUÇÃO
+engine = IngestionEngine(spark, config)
+result = engine.run()
+
+if result.success:
+    print(f"✅ Dados ingeridos: {result.records_processed} registros")
+    print(f"📊 Tabela criada: {config.full_table_name}")
+else:
+    print(f"❌ Erro: {result.error_message}")
+```
+
+### **3. Ingestão Avançada - Configuração Completa**
+
+```python
+# 🏗️ CONFIGURAÇÃO ENTERPRISE
+config = IngestionConfig(
+    # 📁 Fonte
+    source_path="/Volumes/main/bronze/raw/transactions/",
+    file_extension="json",
+    
+    # 🎯 Destino
+    catalog_name="main",
+    schema_name="silver",
+    table_name="transactions_processed",
+    
+    # 💎 Liquid Clustering Avançado
+    enable_liquid_clustering=True,
+    clustering_columns=["transaction_date", "customer_segment", "region"],
+    
+    # 🔄 Streaming Configuration
+    mode="streaming",
+    trigger_interval="30 seconds",
+    
+    # 📊 Schema Evolution
+    auto_evolve_schema=True,
+    merge_schema=True,
+    
+    # 🛡️ Data Quality
+    enable_data_quality_checks=True,
+    quality_rules={
+        "not_null": ["customer_id", "transaction_date"],
+        "positive": ["amount"],
+        "format": {"email": r"^[^@]+@[^@]+\.[^@]+$"}
+    },
+    
+    # 📈 Observabilidade
+    enable_metrics=True,
+    log_level="INFO"
+)
+
+# 🚀 EXECUÇÃO COM MONITORAMENTO
+engine = IngestionEngine(spark, config)
+result = engine.run()
+
+# 📊 MÉTRICAS DETALHADAS
+if result.success:
+    print(f"✅ Pipeline executado com sucesso!")
+    print(f"📈 Registros processados: {result.records_processed:,}")
+    print(f"⏱️ Tempo de execução: {result.execution_time:.2f}s")
+    print(f"💾 Tamanho final: {result.final_size_mb:.1f} MB")
+    print(f"🔄 Checkpoint: {result.checkpoint_location}")
+```
+
+### **4. Monitoramento e Observabilidade**
+
+```python
+from dino_sdk.monitoring import DataPipelineMonitor
+from dino_sdk.utils import get_table_metrics
+
+# 📊 MONITORAMENTO EM TEMPO REAL
+monitor = DataPipelineMonitor(spark)
+
+# Verificar status de uma tabela
+table_status = monitor.get_table_health("main.silver.transactions_processed")
+print(f"📊 Status da tabela: {table_status['status']}")
+print(f"📈 Últimos registros: {table_status['latest_records']}")
+print(f"⏰ Última atualização: {table_status['last_updated']}")
+
+# Métricas detalhadas
+metrics = get_table_metrics(spark, "main.silver.transactions_processed")
+print(f"💿 Total de registros: {metrics['total_records']:,}")
+print(f"📦 Número de arquivos: {metrics['num_files']}")
+print(f"💾 Tamanho total: {metrics['size_gb']:.2f} GB")
+```
+
+### **5. Operações de Manutenção**
+
+```python
+from dino_sdk.maintenance import TableMaintenance
+
+# 🧹 OTIMIZAÇÃO AUTOMÁTICA
+maintenance = TableMaintenance(spark)
+
+# Optimize + VACUUM automático
+result = maintenance.optimize_table(
+    table_name="main.silver.transactions_processed",
+    vacuum_hours=168,  # 7 dias
+    z_order_columns=["transaction_date", "region"]
+)
+
+if result['success']:
+    print(f"✅ Tabela otimizada!")
+    print(f"📉 Arquivos removidos: {result['files_removed']}")
+    print(f"💾 Espaço liberado: {result['space_saved_gb']:.2f} GB")
+---
+
+## ⚡ **CLI Integrada**
+
+### **🔧 Comandos Principais**
+
+```bash
+# Verificar instalação e versão
+python -m dino_sdk --version
+
+# Verificar saúde do ambiente Databricks
+python -m dino_sdk health-check
+
+# Criar schema e volumes automaticamente
+python -m dino_sdk create-schema --catalog main --schema bronze
+
+# Deploy de notebooks para workspace
+python -m dino_sdk deploy-notebooks --workspace-path /Shared/dino_examples/
+
+# Verificar configuração Unity Catalog
+python -m dino_sdk check-unity-catalog --catalog main
+```
+
+### **📊 Comandos de Monitoramento**
+
+```bash
+# Status de uma tabela específica
+python -m dino_sdk table-status --table main.bronze.sales
+
+# Listar todas as tabelas do catálogo
+python -m dino_sdk list-tables --catalog main --schema bronze
+
+# Métricas de performance
+python -m dino_sdk metrics --table main.silver.transactions --days 7
+
+# Verificar checkpoints órfãos
+python -m dino_sdk cleanup-checkpoints --schema main.bronze
+```
+
+---
+
+## 📓 **Notebooks de Exemplo**
+
+### **🚀 Deploy de Notebooks**
+
+Os notebooks de exemplo são incluídos no package e podem ser deployados automaticamente:
+
+```python
+# No Databricks Notebook
+from dino_sdk.deployment import deploy_example_notebooks
+
+# Deploy automático dos notebooks de exemplo
+result = deploy_example_notebooks(
+    workspace_path="/Shared/dino_sdk_examples/",
+    overwrite=True
+)
+
+if result['success']:
+    print(f"✅ {result['notebooks_deployed']} notebooks deployados!")
+    for notebook in result['deployed_notebooks']:
+        print(f"📓 {notebook}")
+else:
+    print(f"❌ Erro no deploy: {result['error']}")
+```
+
+### **📚 Notebooks Disponíveis**
+
+| Notebook | Descrição | Nível |
+|----------|-----------|-------|
+| `01_Getting_Started.ipynb` | Introdução e setup básico | 🟢 Iniciante |
+| `02_AutoLoader_Basics.ipynb` | AutoLoader e schema evolution | 🟡 Intermediário |
+| `03_Liquid_Clustering.ipynb` | Otimização com Liquid Clustering | 🟡 Intermediário |
+| `04_Streaming_Pipelines.ipynb` | Pipelines de streaming avançados | 🔴 Avançado |
+| `05_Data_Quality.ipynb` | Validação e qualidade de dados | 🟡 Intermediário |
+| `06_Monitoring_Observability.ipynb` | Monitoramento e métricas | � Avançado |
+| `07_Production_Patterns.ipynb` | Padrões para produção | 🔴 Avançado |
+
+### **🎯 Acesso Rápido aos Notebooks**
+
+```python
+# Importar notebook específico
+from dino_sdk.notebooks import load_example
+
+# Carregar código de exemplo diretamente
+autoloader_example = load_example("autoloader_basic")
+clustering_example = load_example("liquid_clustering")
+
+# Executar exemplo
+autoloader_example.run(spark, config)
+```
+
+---
+
+## 🔧 **Configuração Avançada**
+
+### **🌐 Variáveis de Ambiente**
+
+```python
+# No Databricks - configurar via cluster environment variables
+# ou no notebook:
+
+import os
+os.environ['DINO_DEFAULT_CATALOG'] = 'main'
+os.environ['DINO_DEFAULT_SCHEMA'] = 'bronze'
+os.environ['DINO_LOG_LEVEL'] = 'INFO'
+os.environ['DINO_ENABLE_METRICS'] = 'true'
+
+# Usar configuração global
+from dino_sdk import set_global_config
+
+set_global_config(
+    default_catalog='main',
+    default_schema='bronze',
+    enable_metrics=True,
+    log_level='INFO'
+)
+```
+
+### **🔐 Integração com Azure Key Vault**
+
+```python
+from dino_sdk.security import AzureKeyVaultManager
+
+# Configurar Key Vault
+kv_manager = AzureKeyVaultManager(
+    vault_url="https://your-keyvault.vault.azure.net/",
+    credential_type="managed_identity"  # ou "service_principal"
+)
+
+# Usar secrets do Key Vault
+config = IngestionConfig(
+    source_path=kv_manager.get_secret("data-source-path"),
+    # outras configurações...
+)
+```
+
+### **📊 Logging Estruturado**
+
+```python
+from dino_sdk.logging import setup_structured_logging
+
+# Configurar logging para Azure Log Analytics
+logger = setup_structured_logging(
+    level="INFO",
+    output_format="json",
+    include_metrics=True,
+    workspace_id="your-log-analytics-workspace"
+)
+
+# Logs automáticos em todas as operações
+engine = IngestionEngine(spark, config, logger=logger)
+```
+
+---
+
+## 🚨 **Troubleshooting Rápido**
+
+### **Verificação de Status de Ingestão**
+
+```python
+# Verificar resultado da ingestão
 result = engine.process_data()
 
-# 📈 VERIFICAR RESULTADO
 if result['success']:
-    print(f"✅ Ingestão concluída com sucesso!")
+    print("✅ Ingestão concluída com sucesso!")
     print(f"📊 Registros processados: {result.get('records_processed', 'N/A')}")
-    print(f"📋 Tabela criada: {config.catalog_name}.{config.schema_name}.{config.table_name}")
+    print(f"📁 Arquivos processados: {result.get('files_processed', 'N/A')}")
 else:
     print("❌ Erro na ingestão:")
     for error in result.get('errors', []):
