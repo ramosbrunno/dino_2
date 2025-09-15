@@ -70,40 +70,63 @@ variable "tags" {
 # ========================
 
 variable "enable_databricks" {
-  description = "Se deve criar o Azure Databricks workspace"
+  description = "Se deve criar o Azure Databricks workspace (habilitado por padrão)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 # ========================
-# Databricks Module Variables
+# SQL Database for Dino SDK Pipeline Logging Variables
 # ========================
 
-variable "databricks_sku" {
-  description = "SKU do Azure Databricks (standard, premium, trial)"
+variable "enable_sql_database" {
+  description = "Se deve criar Azure SQL Database para logs do Dino SDK"
+  type        = bool
+  default     = true
+}
+
+variable "sql_admin_username" {
+  description = "Username do administrador SQL"
   type        = string
-  default     = "standard"
-  
-  validation {
-    condition     = contains(["standard", "premium", "trial"], var.databricks_sku)
-    error_message = "SKU deve ser 'standard', 'premium' ou 'trial'."
-  }
+  default     = "sqladmin"
 }
 
-variable "databricks_public_network_access" {
-  description = "Se o acesso à rede pública deve ser habilitado no Databricks"
+variable "sql_database_sku" {
+  description = "SKU do SQL Database (Basic, S1, S2, P1, etc.)"
+  type        = string
+  default     = "Basic"
+}
+
+variable "sql_enable_public_access" {
+  description = "Habilitar acesso público ao SQL Server"
   type        = bool
   default     = true
 }
 
-variable "databricks_no_public_ip" {
-  description = "Se deve usar Secure Cluster Connectivity (sem IP público)"
+variable "sql_enable_azure_services_access" {
+  description = "Permitir acesso de serviços Azure ao SQL Server"
+  type        = bool
+  default     = true
+}
+
+variable "sql_firewall_rules" {
+  description = "Lista de regras de firewall para SQL Server"
+  type = list(object({
+    name     = string
+    start_ip = string
+    end_ip   = string
+  }))
+  default = []
+}
+
+variable "sql_enable_private_endpoint" {
+  description = "Habilitar private endpoint para SQL Server"
   type        = bool
   default     = false
 }
 
-variable "databricks_store_secrets" {
-  description = "Se deve armazenar informações do Databricks no Key Vault"
-  type        = bool
-  default     = true
+variable "sql_subnet_id" {
+  description = "ID da subnet para private endpoint do SQL"
+  type        = string
+  default     = null
 }

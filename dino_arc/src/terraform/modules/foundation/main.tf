@@ -22,13 +22,6 @@ terraform {
 data "azurerm_client_config" "current" {}
 data "azurerm_subscription" "current" {}
 
-# Generate random suffix for Key Vault name (must be globally unique)
-resource "random_string" "keyvault_suffix" {
-  length  = 8
-  special = false
-  upper   = false
-}
-
 # Generate random password for Service Principal
 resource "random_password" "spn_password" {
   length  = 32
@@ -37,9 +30,9 @@ resource "random_password" "spn_password" {
 
 # Local values for resource naming
 locals {
-  # Nomenclatura padrão: projeto-ambiente-sufixo
+  # Nomenclatura padrão limpa: projeto-ambiente-tipo
   resource_group_name = "${var.projeto}-${var.ambiente}-rsg"
-  keyvault_name      = "${var.projeto}-${var.ambiente}-akv-${random_string.keyvault_suffix.result}"
+  keyvault_name      = "${var.projeto}-${var.ambiente}-akv"
   spn_display_name   = "${var.projeto}-${var.ambiente}-spn"
   
   # Tags padrão que serão aplicadas a todos os recursos
@@ -103,12 +96,13 @@ resource "azuread_service_principal_password" "main" {
 # Role Assignments for Service Principal
 # ========================
 
-# Reader role on the entire subscription
-resource "azurerm_role_assignment" "spn_reader_subscription" {
-  scope                = data.azurerm_subscription.current.id
-  role_definition_name = "Reader"
-  principal_id         = azuread_service_principal.main.object_id
-}
+# Reader role on the entire subscription - SIMPLIFIED
+# Using only Resource Group level permissions for simplicity
+# resource "azurerm_role_assignment" "spn_reader_subscription" {
+#   scope                = data.azurerm_subscription.current.id
+#   role_definition_name = "Reader"
+#   principal_id         = azuread_service_principal.main.object_id
+# }
 
 # Contributor role on the Resource Group
 resource "azurerm_role_assignment" "spn_contributor_rg" {
@@ -117,13 +111,14 @@ resource "azurerm_role_assignment" "spn_contributor_rg" {
   principal_id         = azuread_service_principal.main.object_id
 }
 
-# User Access Administrator role on the Resource Group
-resource "azurerm_role_assignment" "spn_uaccess_rg" {
-  scope                = azurerm_resource_group.main.id
-  role_definition_name = "User Access Administrator"
-  principal_id         = azuread_service_principal.main.object_id
-  principal_type       = "ServicePrincipal"
-}
+# User Access Administrator role on the Resource Group - DISABLED
+# This role assignment may require additional permissions
+# resource "azurerm_role_assignment" "spn_uaccess_rg" {
+#   scope                = azurerm_resource_group.main.id
+#   role_definition_name = "User Access Administrator"
+#   principal_id         = azuread_service_principal.main.object_id
+#   principal_type       = "ServicePrincipal"
+# }
 
 # ========================
 # Key Vault Creation
@@ -147,15 +142,55 @@ resource "azurerm_key_vault" "main" {
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
 
-  # Network ACLs - configuração segura padrão
+  # Network ACLs - permitir acesso público para Terraform
   network_acls {
     bypass         = "AzureServices"
-    default_action = "Deny"
+    default_action = "Allow"
+  }
+
+  # Access policy for current user/service principal (inline)
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = data.azurerm_client_config.current.object_id
+
+    key_permissions = [
+      "Backup", "Create", "Decrypt", "Delete", "Encrypt", "Get", "Import", 
+      "List", "Purge", "Recover", "Restore", "Sign", "UnwrapKey", 
+      "Update", "Verify", "WrapKey", "Release", "Rotate", "GetRotationPolicy", "SetRotationPolicy"
+    ]
+    
+    secret_permissions = [
+      "Backup", "Delete", "Get", "List", "Purge", "Recover", "Restore", "Set"
+    ]
+    
+    certificate_permissions = [
+      "Backup", "Create", "Delete", "DeleteIssuers", "Get", "GetIssuers", 
+      "Import", "List", "ListIssuers", "ManageContacts", "ManageIssuers", 
+      "Purge", "Recover", "Restore", "SetIssuers", "Update"
+    ]
+  }
+
+  # Access policy for the Service Principal (inline)
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = azuread_service_principal.main.object_id
+
+    key_permissions = [
+      "Get", "List", "Create", "Delete", "Update", "Decrypt", "Encrypt", "Sign", "Verify"
+    ]
+    
+    secret_permissions = [
+      "Get", "List", "Set", "Delete"
+    ]
+    
+    certificate_permissions = [
+      "Get", "List", "Create", "Delete", "Update", "Import"
+    ]
   }
 
   tags = local.final_tags
 
-  depends_on = [azurerm_resource_group.main]
+  depends_on = [azurerm_resource_group.main, azuread_service_principal.main]
 }
 
 # ========================

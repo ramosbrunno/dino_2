@@ -2,7 +2,6 @@
 
 # Build directories
 build/
-dist/
 *.egg-info/
 
 # Python cache
