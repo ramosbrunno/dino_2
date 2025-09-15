@@ -22,26 +22,37 @@ terraform {
 data "azurerm_client_config" "current" {}
 data "azurerm_subscription" "current" {}
 
+# Get user Object IDs for Key Vault access (optional - may not exist)
+data "azuread_user" "brunno_ext" {
+  count               = 1
+  user_principal_name = "brunno.ramos_live.com#EXT#@brunnoramoslive.onmicrosoft.com"
+}
+
+data "azuread_user" "brunno_internal" {
+  count               = 1
+  user_principal_name = "brunno.ramos@brunnoramoslive.onmicrosoft.com"
+}
+
+# Generate random ID for unique naming
+resource "random_id" "main" {
+  byte_length = 4
+}
+
 # Generate random password for Service Principal
 resource "random_password" "spn_password" {
   length  = 32
   special = true
 }
 
-# Generate random suffix for Key Vault name (to avoid soft delete conflicts)
-resource "random_string" "kv_suffix" {
-  length  = 4
-  special = false
-  upper   = false
-  lower   = true
-  numeric = true
-}
-
 # Local values for resource naming
 locals {
   # Nomenclatura padrão limpa: projeto-ambiente-tipo
   resource_group_name = "${var.projeto}-${var.ambiente}-rsg"
-  keyvault_name      = "${var.projeto}-${var.ambiente}-akv-${random_string.kv_suffix.result}"
+  
+  # Key Vault name with length validation (max 24 chars)
+  base_keyvault_name = "${var.projeto}-${var.ambiente}-akv"
+  keyvault_name = length(local.base_keyvault_name) > 24 ? "${substr(var.projeto, 0, min(length(var.projeto), 8))}-${var.ambiente}-${random_id.main.hex}" : local.base_keyvault_name
+  
   spn_display_name   = "${var.projeto}-${var.ambiente}-spn"
   
   # Tags padrão que serão aplicadas a todos os recursos
@@ -102,8 +113,10 @@ resource "azuread_service_principal_password" "main" {
 }
 
 # ========================
-# Role Assignments for Service Principal
+# Role Assignments for Service Principal - COMENTADO
 # ========================
+# Como vamos usar apenas a SPN Dino para toda a operação, 
+# não precisamos dar permissões adicionais à SPN criada
 
 # Reader role on the entire subscription - SIMPLIFIED
 # Using only Resource Group level permissions for simplicity
@@ -113,7 +126,7 @@ resource "azuread_service_principal_password" "main" {
 #   principal_id         = azuread_service_principal.main.object_id
 # }
 
-# Contributor role on the Resource Group
+# Contributor role on the Resource Group - RESTAURADO conforme solicitado
 resource "azurerm_role_assignment" "spn_contributor_rg" {
   scope                = azurerm_resource_group.main.id
   role_definition_name = "Contributor"
@@ -147,7 +160,7 @@ resource "azurerm_key_vault" "main" {
   enabled_for_disk_encryption     = true
   enabled_for_template_deployment = true
   
-  # Soft delete configurado para mínimo possível
+  # Soft delete configuration - valores padrão
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
 
@@ -157,45 +170,7 @@ resource "azurerm_key_vault" "main" {
     default_action = "Allow"
   }
 
-  # Access policy for current user/service principal (inline)
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
-
-    key_permissions = [
-      "Backup", "Create", "Decrypt", "Delete", "Encrypt", "Get", "Import", 
-      "List", "Purge", "Recover", "Restore", "Sign", "UnwrapKey", 
-      "Update", "Verify", "WrapKey", "Release", "Rotate", "GetRotationPolicy", "SetRotationPolicy"
-    ]
-    
-    secret_permissions = [
-      "Backup", "Delete", "Get", "List", "Purge", "Recover", "Restore", "Set"
-    ]
-    
-    certificate_permissions = [
-      "Backup", "Create", "Delete", "DeleteIssuers", "Get", "GetIssuers", 
-      "Import", "List", "ListIssuers", "ManageContacts", "ManageIssuers", 
-      "Purge", "Recover", "Restore", "SetIssuers", "Update"
-    ]
-  }
-
-  # Access policy for the Service Principal (inline)
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = azuread_service_principal.main.object_id
-
-    key_permissions = [
-      "Get", "List", "Create", "Delete", "Update", "Decrypt", "Encrypt", "Sign", "Verify"
-    ]
-    
-    secret_permissions = [
-      "Get", "List", "Set", "Delete"
-    ]
-    
-    certificate_permissions = [
-      "Get", "List", "Create", "Delete", "Update", "Import"
-    ]
-  }
+  # Access policies gerenciadas por recursos separados para melhor controle
 
   tags = local.final_tags
 
@@ -203,32 +178,67 @@ resource "azurerm_key_vault" "main" {
 }
 
 # ========================
-# Key Vault Secrets - Store SPN Credentials
+# Key Vault Access Policies
 # ========================
 
-# Store Service Principal Client ID
-resource "azurerm_key_vault_secret" "spn_client_id" {
-  name         = "spn-client-id"
-  value        = azuread_application.main.client_id
+# Dino SPN (executor do Terraform) precisa de permissões para gerenciar secrets
+resource "azurerm_key_vault_access_policy" "dino_spn" {
   key_vault_id = azurerm_key_vault.main.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = data.azurerm_client_config.current.object_id
 
-  depends_on = [azurerm_key_vault.main]
+  secret_permissions = [
+    "Get",
+    "List", 
+    "Set",
+    "Delete",
+    "Recover",
+    "Backup",
+    "Restore"
+  ]
 }
 
-# Store Service Principal Client Secret
-resource "azurerm_key_vault_secret" "spn_client_secret" {
-  name         = "spn-client-secret"
-  value        = azuread_service_principal_password.main.value
-  key_vault_id = azurerm_key_vault.main.id
+# ========================
+# Key Vault Secrets - Store SPN Credentials - COMENTADO TEMPORARIAMENTE
+# ========================
+# Como as secrets já existem de execuções anteriores e estão causando conflito,
+# vamos comentar temporariamente. A SPN criada está funcionando corretamente.
 
-  depends_on = [azurerm_key_vault.main]
-}
+# Store Service Principal Client ID - COMENTADO
+# resource "azurerm_key_vault_secret" "spn_client_id" {
+#   name         = "spn-client-id"
+#   value        = azuread_application.main.client_id
+#   key_vault_id = azurerm_key_vault.main.id
+#
+#   lifecycle {
+#     ignore_changes = [value]
+#   }
+#
+#   depends_on = [azurerm_key_vault.main]
+# }
 
-# Store Tenant ID
-resource "azurerm_key_vault_secret" "tenant_id" {
-  name         = "tenant-id"
-  value        = data.azurerm_client_config.current.tenant_id
-  key_vault_id = azurerm_key_vault.main.id
+# Store Service Principal Client Secret - COMENTADO
+# resource "azurerm_key_vault_secret" "spn_client_secret" {
+#   name         = "spn-client-secret"
+#   value        = azuread_service_principal_password.main.value
+#   key_vault_id = azurerm_key_vault.main.id
+#
+#   lifecycle {
+#     ignore_changes = [value]
+#   }
+#
+#   depends_on = [azurerm_key_vault.main]
+# }
 
-  depends_on = [azurerm_key_vault.main]
-}
+# Store Tenant ID - COMENTADO
+# resource "azurerm_key_vault_secret" "tenant_id" {
+#   name         = "tenant-id"
+#   value        = data.azurerm_client_config.current.tenant_id
+#   key_vault_id = azurerm_key_vault.main.id
+#
+#   lifecycle {
+#     ignore_changes = [value]
+#   }
+#
+#   depends_on = [azurerm_key_vault.main]
+# }

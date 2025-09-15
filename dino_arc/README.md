@@ -1,497 +1,456 @@
-# 🦕 DINO ARC - Data Infrastructure and Operations Automation & Resource Configuration
+# DINO ARC v2.3.0 🚀
 
-**Ferramenta CLI completa para automação de infraestrutura Azure com Databricks Premium, Unity Catalog e Serverless Compute.**
+**Ferramenta CLI Inteligente para Criação Automatizada de Infraestrutura Azure**
 
-## 📋 **Índice**
+Automatize a criação de ambientes completos Azure com Databricks Premium, Unity Catalog, Azure SQL Database e gerenciamento inteligente de secrets usando Terraform e autenticação Service Principal (SPN).
 
-- [🎯 Visão Geral](#-visão-geral)
-- [⚡ Quick Start](#-quick-start)
-- [🔧 Configuração do Ambiente](#-configuração-do-ambiente)
-- [📦 Instalação de Dependências](#-instalação-de-dependências)
-- [🚀 Uso da Ferramenta](#-uso-da-ferramenta)
-- [🔐 Configuração do Serverless](#-configuração-do-serverless)
-- [📊 Componentes Criados](#-componentes-criados)
-- [🔍 Troubleshooting](#-troubleshooting)
-- [📖 Documentação Detalhada](#-documentação-detalhada)
+## 🎯 Características Principais
 
----
+### 🔐 **Segurança Avançada**
+- ✅ Autenticação via Service Principal (SPN)
+- ✅ Gerenciamento automático de secrets no Azure Key Vault
+- ✅ Separação de privilégios: SPN do Dino executa, SPN criada recebe políticas
+- ✅ Access policies inteligentes com permissões mínimas necessárias
 
-## 🎯 **Visão Geral**
+### 🧠 **Sistema de Nomenclatura Inteligente**
+- ✅ **Nomenclatura adaptativa**: Respeita automaticamente limites do Azure
+- ✅ **Key Vault**: Máximo 24 caracteres com truncamento automático
+- ✅ **Storage Account**: Máximo 24 caracteres com random ID para unicidade
+- ✅ **Databricks Workspace**: Nomenclatura otimizada para Premium SKU
 
-O **DINO ARC** é uma ferramenta CLI que automatiza completamente a criação e configuração de infraestrutura Azure para projetos de dados, incluindo:
+### 🏗️ **Infraestrutura Completa**
+- ✅ **Azure Resource Group**: Organização centralizada de recursos
+- ✅ **Azure Key Vault**: Armazenamento seguro de credenciais com soft delete
+- ✅ **Service Principal**: Criação automática com permissões corretas
+- ✅ **Databricks Premium**: Unity Catalog habilitado e Serverless ready
+- ✅ **Unity Catalog Storage**: ADLS Gen2 com configurações otimizadas
+- ✅ **Azure SQL Database**: Para logging de pipelines (opcional)
 
-- ✅ **Azure Resource Group** com configurações optimizadas
-- ✅ **Azure Key Vault** para gestão segura de secrets
-- ✅ **Service Principal** com permissões adequadas
-- ✅ **Azure SQL Database** com configurações de performance
-- ✅ **Databricks Premium** com Unity Catalog
-- ✅ **Serverless Compute** para workflows, notebooks e pipelines
-- ✅ **SQL Warehouse Serverless** para analytics
-- ✅ **Arquitetura Medallion** (Bronze, Silver, Gold, Workspace)
+### 🔄 **Tratamento Inteligente de Erros**
+- ✅ **Secrets duplicadas**: Detecção automática e continuidade da execução
+- ✅ **Timeouts configuráveis**: Para recursos que demandam mais tempo
+- ✅ **Dependencies management**: Ordem correta de criação de recursos
+- ✅ **State recovery**: Recuperação inteligente do estado Terraform
 
-### 🌟 **Características Principais**
+## ⚡ Setup Rápido
 
-- 🔄 **Terraform**: Infraestrutura como código
-- 🔐 **Service Principal**: Autenticação segura
-- 📊 **Unity Catalog**: Governança de dados
-- ⚡ **Serverless**: Compute otimizado e econômico
-- 🎯 **East US 2**: Região otimizada
-- 🔒 **Sem Soft Delete**: Recursos limpos
-- 📋 **Logging Detalhado**: Diagnósticos completos
+### Pré-requisitos
+- **Python 3.8+** instalado
+- **Terraform 1.0+** instalado
+- **Service Principal Azure** com permissões adequadas
+- **Azure CLI** (opcional, para validações)
 
----
+### 🚀 Instalação
 
-## ⚡ **Quick Start**
+#### 1. Clonar e Configurar Ambiente
+```bash
+# Clonar repositório
+git clone <repository-url>
+cd dino_arc
 
-### Comando Rápido de Apply
-```cmd
-cd "c:\caminho\para\dino_2\dino_arc" && python -m src.cli --client-id SEU_CLIENT_ID --client-secret SEU_CLIENT_SECRET --tenant_id SEU_TENANT_ID --subscription-id SEU_SUBSCRIPTION_ID --action apply --projeto data-master --location "East US 2"
-```
-
-### Comando Rápido de Destroy
-```cmd
-cd "c:\caminho\para\dino_2\dino_arc" && python -m src.cli --client-id SEU_CLIENT_ID --client-secret SEU_CLIENT_SECRET --tenant_id SEU_TENANT_ID --subscription-id SEU_SUBSCRIPTION_ID --action destroy --projeto data-master --location "East US 2"
-```
-
----
-
-## 🔧 **Configuração do Ambiente**
-
-### **1. Pré-requisitos**
-
-#### 🐍 **Python 3.8+**
-```cmd
-python --version
-# Deve retornar Python 3.8 ou superior
-```
-
-#### 🔧 **Terraform 1.0+**
-```cmd
-# Download do Terraform
-# https://www.terraform.io/downloads.html
-terraform --version
-# Deve retornar Terraform v1.0 ou superior
-```
-
-#### ☁️ **Azure CLI**
-```cmd
-# Download do Azure CLI
-# https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
-az --version
-# Deve retornar versão do Azure CLI
-```
-
-### **2. Clonagem do Repositório**
-```cmd
-git clone https://github.com/ramosbrunno/dino_2.git
-cd dino_2/dino_arc
-```
-
-### **3. Configuração do Service Principal**
-
-#### 🔐 **Criar Service Principal**
-```cmd
-az login
-az ad sp create-for-rbac --name "data-master-spn" --role="Contributor" --scopes="/subscriptions/SEU_SUBSCRIPTION_ID"
-```
-
-#### 📋 **Obter Informações**
-Anote as seguintes informações retornadas:
-- `appId` = **client_id**
-- `password` = **client_secret**
-- `tenant` = **tenant_id**
-- `subscription_id` = **subscription_id**
-
-#### ⚙️ **Permissões Adicionais**
-```cmd
-# Permissão para Key Vault
-az role assignment create --assignee SEU_CLIENT_ID --role "Key Vault Administrator" --scope "/subscriptions/SEU_SUBSCRIPTION_ID"
-
-# Permissão para SQL Server
-az role assignment create --assignee SEU_CLIENT_ID --role "SQL Server Contributor" --scope "/subscriptions/SEU_SUBSCRIPTION_ID"
-```
-
----
-
-## 📦 **Instalação de Dependências**
-
-### **1. Ambiente Virtual (Recomendado)**
-```cmd
 # Criar ambiente virtual
 python -m venv dino_env
 
-# Ativar ambiente virtual
-# Windows:
+# Ativar ambiente virtual (Windows)
 dino_env\Scripts\activate
-# Linux/Mac:
-source dino_env/bin/activate
-```
 
-### **2. Instalar Dependências Python**
-```cmd
-# Instalar dependências básicas
-pip install -r requirements.txt
-
-# Instalar Databricks SDK (obrigatório para Serverless)
-pip install databricks-sdk
-
-# Instalar dependências de desenvolvimento (opcional)
+# Instalar dependências
 pip install -e .
 ```
 
-### **3. Verificar Instalação**
-```cmd
-# Verificar se todas as dependências foram instaladas
-python -c "import databricks.sdk; print('✅ Databricks SDK instalado')"
-python -c "import azure.identity; print('✅ Azure Identity instalado')"
-python -c "import terraform; print('✅ Terraform disponível')" 2>/dev/null || echo "⚠️ Terraform CLI necessário"
+#### 2. Instalar Terraform
+
+**Opção A: Windows com winget (Recomendado)**
+```bash
+winget install HashiCorp.Terraform
 ```
 
----
-
-## 🚀 **Uso da Ferramenta**
-
-### **1. Sintaxe Básica**
-```cmd
-python -m src.cli [OPÇÕES]
-```
-
-### **2. Parâmetros Obrigatórios**
-- `--client-id`: Service Principal Client ID
-- `--client-secret`: Service Principal Client Secret  
-- `--tenant_id`: Azure Tenant ID
-- `--subscription-id`: Azure Subscription ID
-- `--action`: Ação a executar (`apply` ou `destroy`)
-- `--projeto`: Nome do projeto
-- `--location`: Região Azure (`"East US 2"`)
-
-### **3. Exemplo Completo - Apply**
-```cmd
-cd "c:\Users\User\OneDrive\Documentos\Projetos\Data_Master_2025\GIT\dino_2\dino_arc"
-
-python -m src.cli \
-  --client-id Service Principal Client ID \
-  --client-secret Service Principal Client Secret \
-  --tenant_id Azure Tenant ID \
-  --subscription-id Azure Subscription ID \
-  --action apply \
-  --projeto data-master \
-  --location "East US 2"
-```
-
-### **4. Exemplo Completo - Destroy**
-```cmd
-python -m src.cli \
-  --client-id Service Principal Client ID \
-  --client-secret Service Principal Client Secret \
-  --tenant_id Azure Tenant ID \
-  --subscription-id Azure Subscription ID \
-  --action destroy \
-  --projeto data-master \
-  --location "East US 2"
-```
-
----
-
-## 🔐 **Configuração do Serverless**
-
-### **🎯 Habilitação Automática vs Manual**
-
-O DINO ARC tentará habilitar automaticamente o **"Serverless compute for workflows, notebooks, and Lakeflow Declarative Pipelines"**, mas se a habilitação automática falhar, siga os passos manuais abaixo.
-
-### **📋 Passo a Passo Manual (Baseado na Documentação Microsoft)**
-
-#### **1. Acesso ao Databricks Account Console**
-```
-🌐 URL: https://accounts.azuredatabricks.net
-🔐 Login: Use as credenciais do Service Principal ou conta administrativa
-```
-
-#### **2. Navegação para Feature Enablement**
-```
-⚙️ Settings → Feature enablement
-```
-
-#### **3. Habilitar Serverless Compute**
-Marque as seguintes opções:
-- ✅ **Serverless compute for workflows, notebooks, and Lakeflow Declarative Pipelines**
-- ✅ **Unity Catalog** (se ainda não habilitado)
-- ✅ **Enhanced security monitoring** (opcional mas recomendado)
-
-#### **4. Configurações Account-Level**
-```
-📝 Navegue para: Settings → Account settings → Workspace settings
-✅ Habilite: "Allow serverless compute"
-✅ Habilite: "Enable serverless SQL warehouses"
-```
-
-#### **5. Configurações de Rede (se necessário)**
-```
-🌐 Navegue para: Settings → Network → Serverless
-✅ Configure: "Enable serverless compute networking"
-⚠️ Nota: O DINO ARC não configura redes customizadas - usa defaults seguros
-```
-
-#### **6. Tempo de Propagação**
-```
-⏳ Aguarde: 5-10 minutos para propagação das configurações
-🔄 Verifique: Execute novamente o comando apply para validar
-```
-
-### **🔍 Verificação de Status**
-
-#### **Via CLI do DINO ARC**
-```cmd
-# O comando apply mostrará o status do serverless
-python -m src.cli ... --action apply
-```
-
-#### **Via Databricks Workspace**
-```
-🌐 Acesse: Seu workspace Databricks
-⚙️ Settings → Admin Console → Workspace settings
-🔍 Verifique: "Serverless compute" deve estar "Enabled"
-```
-
-### **📊 Logs Detalhados**
-
-O DINO ARC cria logs detalhados em:
-```
-📁 logs/serverless_enablement_[timestamp].log
-```
-
-Este arquivo contém:
-- 🔍 **Stacktraces completos** de erros
-- 📝 **APIs tentadas** e suas respostas  
-- 🔐 **Fluxo de autenticação** detalhado
-- ⚙️ **Configurações aplicadas** e falhadas
-
-### **🚨 Troubleshooting Serverless**
-
-#### **Problema: "Databricks SDK não disponível"**
-```cmd
-# Solução: Instalar o SDK
-pip install databricks-sdk
-```
-
-#### **Problema: "Account-level APIs requerem account_id"**
-```
-✅ Solução: Configuração manual via Account Console (passos acima)
-```
-
-#### **Problema: "WorkspaceConfAPI.set_status() argumentos incorretos"**
-```
-✅ Solução: O DINO ARC tenta múltiplas assinaturas automaticamente
-📋 Verifique: logs/ para detalhes técnicos
-```
-
-#### **Problema: "Serverless não habilitado após configuração"**
-```
-⏳ Aguarde: 5-10 minutos para propagação
-🔄 Execute: comando apply novamente
-📞 Contate: Suporte Databricks se persistir
-```
-
----
-
-## 📊 **Componentes Criados**
-
-### **🏗️ Infraestrutura Base**
-- **Resource Group**: `{projeto}-{ambiente}-rsg`
-- **Key Vault**: `{projeto}-{ambiente}-akv-[random]`
-- **Service Principal**: `{projeto}-{ambiente}-spn`
-
-### **🧮 Databricks Premium**
-- **Workspace**: `{projeto}-{ambiente}-dbw-[random]`
-- **Pricing Tier**: Premium (necessário para Unity Catalog)
-- **Region**: East US 2
-- **Network**: Default (otimizado para Serverless)
-
-### **📊 Unity Catalog**
-- **Metastore**: `{projeto}-{ambiente}-metastore`
-- **Storage Account**: `{projeto}{ambiente}ucsa[random]`
-- **Catalog**: `{projeto}_{ambiente}`
-
-### **🗂️ Schemas (Arquitetura Medallion)**
-- **Bronze**: `{projeto}_{ambiente}.bronze`
-- **Silver**: `{projeto}_{ambiente}.silver`  
-- **Gold**: `{projeto}_{ambiente}.gold`
-- **Workspace**: `{projeto}_{ambiente}.workspace`
-
-### **🏭 SQL Warehouse**
-- **Nome**: `{projeto}-{ambiente}-warehouse`
-- **Tipo**: Serverless
-- **Size**: X-Small (escalável automaticamente)
-- **Auto-stop**: 10 minutos
-
-### **⚡ Serverless Compute**
-- **Workflows**: Habilitado para Jobs
-- **Notebooks**: Habilitado para desenvolvimento
-- **Pipelines**: Habilitado para Lakeflow Declarative Pipelines
-- **Policies**: Política customizada para Serverless
-
----
-
-## 🔍 **Troubleshooting**
-
-### **🚨 Problemas Comuns**
-
-#### **1. Erro de Autenticação**
-```
-❌ Erro: "Authentication failed"
-✅ Solução:
-   1. Verificar client_id, client_secret, tenant_id
-   2. Verificar permissões do Service Principal
-   3. Executar: az login para testar credenciais
-```
-
-#### **2. Terraform Não Encontrado**
-```
-❌ Erro: "terraform not found"
-✅ Solução:
-   1. Instalar Terraform: https://www.terraform.io/downloads.html
-   2. Adicionar ao PATH do sistema
-   3. Verificar: terraform --version
-```
-
-#### **3. Dependências Python**
-```
-❌ Erro: "Module not found"
-✅ Solução:
-   1. Ativar ambiente virtual: dino_env\Scripts\activate
-   2. Instalar dependências: pip install -r requirements.txt
-   3. Instalar Databricks SDK: pip install databricks-sdk
-```
-
-#### **4. Permissões Insuficientes**
-```
-❌ Erro: "Insufficient privileges"
-✅ Solução:
-   1. Verificar papel do Service Principal: Contributor
-   2. Adicionar permissões específicas (ver seção Configuração)
-   3. Aguardar propagação das permissões (até 10 minutos)
-```
-
-#### **5. Recursos Já Existem**
-```
-❌ Erro: "Resource already exists"
-✅ Solução:
-   1. Executar destroy primeiro: --action destroy
-   2. Aguardar conclusão completa
-   3. Executar apply novamente: --action apply
-```
-
-### **📋 Logs e Diagnósticos**
-
-#### **Localização dos Logs**
-```
-📁 logs/serverless_enablement_[timestamp].log - Logs de Serverless
-📁 terraform/ - Estados do Terraform
-📁 dino_env/ - Ambiente virtual Python
-```
-
-#### **Comandos de Diagnóstico**
-```cmd
-# Verificar versões
-python --version
+**Opção B: Download Manual**
+1. Baixar do [site oficial Terraform](https://www.terraform.io/downloads)
+2. Extrair para pasta no PATH do sistema
+3. Verificar: `terraform --version`
+#### 3. Verificar Instalação
+```bash
+# Verificar Terraform
 terraform --version
-az --version
 
-# Verificar dependências Python
-pip list | findstr databricks
-pip list | findstr azure
+# Verificar Python
+python --version
 
-# Verificar autenticação Azure
+# Verificar DINO ARC
+python -m src.cli --help
+```
+
+## 🚀 Uso Básico
+
+### 📋 Sintaxe Principal
+```bash
+python -m src.cli \
+  --client-id <SPN_CLIENT_ID> \
+  --client-secret <SPN_CLIENT_SECRET> \
+  --tenant_id <AZURE_TENANT_ID> \
+  --subscription-id <AZURE_SUBSCRIPTION_ID> \
+  --action apply \
+  --projeto <NOME_PROJETO> \
+  --location "<AZURE_REGION>"
+```
+
+### 🎯 Exemplo Prático
+```bash
+# Criar infraestrutura completa para projeto "data-analytics"
+python -m src.cli \
+  --client-id "12345678-1234-1234-1234-123456789abc" \
+  --client-secret "your-client-secret-here" \
+  --tenant_id "87654321-4321-4321-4321-cba987654321" \
+  --subscription-id "11111111-2222-3333-4444-555555555555" \
+  --action apply \
+  --projeto "data-analytics" \
+  --location "Brazil South"
+```
+
+### 🗑️ Destruir Infraestrutura
+```bash
+# Remover todos os recursos criados
+python -m src.cli \
+  --client-id "12345678-1234-1234-1234-123456789abc" \
+  --client-secret "your-client-secret-here" \
+  --tenant_id "87654321-4321-4321-4321-cba987654321" \
+  --subscription-id "11111111-2222-3333-4444-555555555555" \
+  --action destroy \
+  --projeto "data-analytics" \
+  --location "Brazil South"
+```
+
+## 📦 Recursos Criados
+
+### 🏗️ **Infraestrutura Foundation**
+| Recurso | Nomenclatura | Descrição |
+|---------|-------------|-----------|
+| **Resource Group** | `{projeto}-{ambiente}-rsg` | Organização de todos os recursos |
+| **Key Vault** | `{projeto}-{ambiente}-akv-{random}` | Armazenamento seguro de secrets |
+| **Service Principal** | `{projeto}-{ambiente}-spn` | Identidade para automação |
+
+### 🧮 **Databricks Premium + Unity Catalog**
+| Recurso | Nomenclatura | Descrição |
+|---------|-------------|-----------|
+| **Databricks Workspace** | `{projeto}-{ambiente}-dbw` | Workspace Premium SKU |
+| **Unity Catalog Storage** | `{projeto}{ambiente}sauc{random}` | ADLS Gen2 para metastore |
+| **Storage Container** | `unity-catalog` | Container para Unity Catalog |
+
+### 💾 **Azure SQL Database (Opcional)**
+| Recurso | Nomenclatura | Descrição |
+|---------|-------------|-----------|
+| **SQL Server** | `{projeto}-{ambiente}-sql` | Servidor Azure SQL |
+| **SQL Database** | `{projeto}-{ambiente}-db-logs` | Database para logs de pipeline |
+
+### 🔐 **Secrets Armazenadas no Key Vault**
+| Secret | Descrição |
+|--------|-----------|
+| `spn-client-id` | Client ID da SPN criada |
+| `spn-client-secret` | Secret da SPN criada |
+| `databricks-workspace-url` | URL da workspace Databricks |
+| `unity-catalog-storage-name` | Nome do storage do Unity Catalog |
+| `databricks-access-token` | Token de acesso gerado |
+
+## 🎯 Exemplos de Uso
+
+### 🔐 **Ambiente de Desenvolvimento**
+```bash
+# Criar ambiente de desenvolvimento completo
+python -m src.cli \
+  --client-id "12345678-1234-1234-1234-123456789abc" \
+  --client-secret "your-dev-secret" \
+  --tenant_id "87654321-4321-4321-4321-cba987654321" \
+  --subscription-id "11111111-2222-3333-4444-555555555555" \
+  --action apply \
+  --projeto "analytics-dev" \
+  --location "Brazil South"
+```
+
+### 🏢 **Ambiente de Produção**
+```bash
+# Para produção, use variáveis de ambiente (mais seguro)
+# Configure primeiro:
+set ARM_CLIENT_ID=your-prod-client-id
+set ARM_CLIENT_SECRET=your-prod-secret
+set ARM_TENANT_ID=your-tenant-id
+set ARM_SUBSCRIPTION_ID=your-prod-subscription
+
+# Execute sem expor credenciais
+python -m src.cli \
+  --action apply \
+  --projeto "analytics-prod" \
+  --location "East US 2"
+```
+
+### 🎯 **Projeto Específico**
+```bash
+# Criar infraestrutura para projeto de Machine Learning
+python -m src.cli \
+  --client-id "your-client-id" \
+  --client-secret "your-client-secret" \
+  --tenant_id "your-tenant-id" \
+  --subscription-id "your-subscription-id" \
+  --action apply \
+  --projeto "ml-platform" \
+  --location "West Europe"
+```
+
+### 🗑️ **Limpeza de Recursos**
+```bash
+# Remover infraestrutura específica
+python -m src.cli \
+  --client-id "your-client-id" \
+  --client-secret "your-client-secret" \
+  --tenant_id "your-tenant-id" \
+  --subscription-id "your-subscription-id" \
+  --action destroy \
+  --projeto "analytics-dev" \
+  --location "Brazil South"
+```
+
+## 🛡️ Segurança e Boas Práticas
+
+### 🔐 **Gerenciamento de Credenciais**
+- ✅ **NUNCA** commite credenciais reais no código
+- ✅ Use variáveis de ambiente para produção
+- ✅ Mantenha secrets seguros no Azure Key Vault
+- ✅ Revogue credenciais se expostas acidentalmente
+- ✅ Rotacione secrets periodicamente
+
+### 🎯 **Separação de Privilégios**
+- ✅ **SPN do Dino**: Executa Terraform com privilégios de subscription
+- ✅ **SPN Criada**: Recebe apenas policies específicas dos recursos
+- ✅ **Key Vault**: Access policies com permissões mínimas necessárias
+
+### 📋 **Nomenclatura Inteligente**
+- ✅ **Limites Azure**: Respeitados automaticamente (Key Vault: 24 chars)
+- ✅ **Unicidade**: Random IDs para evitar conflitos
+- ✅ **Padrão**: `{projeto}-{ambiente}-{tipo}` para organização
+
+## 🔧 Recursos Avançados
+
+### 🧠 **Sistema de Tratamento de Erros**
+- ✅ **Secrets Duplicadas**: Detecção automática com continuidade
+- ✅ **Timeouts**: Configuráveis para recursos complexos
+- ✅ **Dependencies**: Ordem correta de criação (depends_on)
+- ✅ **State Recovery**: Recuperação inteligente do estado Terraform
+
+### ⚙️ **Configurações Otimizadas**
+- ✅ **Databricks Premium**: Unity Catalog e Serverless habilitados
+- ✅ **ADLS Gen2**: Hierarchical namespace para Unity Catalog
+- ✅ **SQL Database**: Configuração otimizada para logging
+- ✅ **Network Security**: Regras padrão de segurança
+
+## 🚨 Troubleshooting
+
+### ❌ **Erro: "Key Vault name too long"**
+```
+✅ Solução: Sistema automático agora trunca nomes longos
+ℹ️ Key Vault: Máximo 24 caracteres com random ID para unicidade
+```
+
+### ❌ **Erro: "Secrets already exist"**
+```
+✅ Solução: Sistema detecta automaticamente e continua execução
+ℹ️ Comportamento: Tratamento inteligente de secrets duplicadas
+```
+
+### ❌ **Erro: "Terraform authentication failed"**
+```bash
+# Verificar credenciais
+az login --service-principal \
+  --username "your-client-id" \
+  --password "your-client-secret" \
+  --tenant "your-tenant-id"
+
+# Verificar permissões
+az role assignment list --assignee "your-client-id"
+```
+
+### ❌ **Erro: "Resource Group not found"**
+```bash
+# Verificar subscription ativa
 az account show
 
-# Verificar estado do Terraform
-cd terraform && terraform show
+# Verificar permissões na subscription
+az role assignment list --all --assignee "your-client-id" \
+  --query "[?scope=='/subscriptions/your-subscription-id']"
 ```
 
----
+### 🔧 **Reinicializar Estado**
+```bash
+# Se houver problemas com estado Terraform
+cd src/terraform
+terraform init -reconfigure
+terraform refresh
+```
 
-## 📖 **Documentação Detalhada**
+## 📊 Logs e Monitoramento
 
-### **🔗 Links Úteis**
+### 📝 **Logs de Execução**
+```bash
+# Logs do CLI são exibidos em tempo real com emojis
+🔐 Autenticando com Azure via Service Principal...
+✅ Autenticação bem-sucedida!
+🔧 Verificando inicialização do Terraform...
+✅ Terraform já inicializado!
+🚀 Criando infraestrutura completa...
+```
 
-- **[Microsoft Databricks Serverless](https://docs.microsoft.com/en-us/azure/databricks/serverless-compute/)**
-- **[Unity Catalog Documentation](https://docs.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/)**
-- **[Terraform Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)**
-- **[Azure CLI Reference](https://docs.microsoft.com/en-us/cli/azure/reference-index)**
+### 🔍 **Estado do Terraform**
+```bash
+# Verificar estado atual
+cd src/terraform
+terraform show
 
-### **📁 Estrutura do Projeto**
+# Listar recursos criados
+terraform state list
+
+# Detalhes de um recurso específico
+terraform state show module.foundation.azurerm_resource_group.main
+```
+
+### 📊 **Verificação no Azure Portal**
+Após execução bem-sucedida, verifique no Azure Portal:
+- ✅ Resource Group criado
+- ✅ Key Vault com secrets armazenadas
+- ✅ Service Principal configurada
+- ✅ Databricks Workspace Premium
+- ✅ Unity Catalog Storage Account
+
+## 🔄 Unity Catalog - Configuração Manual
+
+### 📋 **Passos Pós-Deploy**
+1. **Acessar Databricks Account Console**
+2. **Criar Metastore** (se não existir)
+3. **Associar Metastore à Workspace**
+4. **Configurar External Storage Location**
+5. **Criar Catalog com ALL PRIVILEGES**
+
+### 🏗️ **Comandos SQL no Databricks**
+```sql
+-- Criar catalog após configurar metastore
+CREATE CATALOG my_catalog
+MANAGED LOCATION 'abfss://unity-catalog@{storage_name}.dfs.core.windows.net/'
+COMMENT 'Catalog criado via DINO ARC';
+
+-- Conceder privilégios (substitua pelo email real)
+GRANT ALL PRIVILEGES ON CATALOG my_catalog TO `admin@company.com`;
+```
+
+## �️ Arquitetura
+
+O DINO ARC cria automaticamente:
+
+- ✅ **Resource Group**: `{projeto}-{ambiente}-rsg`
+- ✅ **Key Vault**: Para armazenamento seguro de secrets
+- ✅ **Service Principal**: Para autenticação automatizada
+- ✅ **Azure SQL Database**: Para logs e metadados
+## 🏗️ Arquitetura
+
+### 📊 **Módulos Terraform**
 ```
 dino_arc/
-├── src/
-│   ├── cli.py                      # CLI principal
-│   ├── sdk/
-│   │   └── azure_auth.py          # Autenticação Azure
-│   ├── databricks_config/
-│   │   ├── unity_catalog_setup.py # Configuração Unity Catalog
-│   │   └── enable_serverless.py   # Habilitação Serverless
-│   └── terraform/
-│       └── terraform_manager.py   # Gerenciamento Terraform
-├── terraform/
-│   ├── foundation/                 # Infraestrutura base
-│   ├── databricks/                # Databricks Premium
-│   └── sql_database/              # Azure SQL Database
-├── logs/                          # Logs detalhados
-├── requirements.txt               # Dependências Python
-├── setup.py                      # Configuração do pacote
-└── README.md                     # Este arquivo
+├── src/terraform/
+│   ├── main.tf                    # Orquestração principal
+│   ├── variables.tf               # Variáveis globais
+│   ├── outputs.tf                 # Outputs consolidados
+│   └── modules/
+│       ├── foundation/            # RG + Key Vault + SPN
+│       │   ├── main.tf
+│       │   ├── variables.tf
+│       │   └── outputs.tf
+│       ├── databricks/            # Databricks + Unity Catalog
+│       │   ├── main.tf
+│       │   ├── variables.tf
+│       │   └── outputs.tf
+│       └── sql_database/          # Azure SQL (opcional)
+│           ├── main.tf
+│           ├── variables.tf
+│           └── outputs.tf
 ```
 
-### **🎯 Casos de Uso**
+### 🔄 **Fluxo de Execução**
+1. **🔐 Autenticação**: Service Principal do Dino
+2. **📦 Foundation**: Resource Group + Key Vault + SPN nova
+3. **🧮 Databricks**: Workspace Premium + Unity Catalog Storage
+4. **💾 SQL Database**: Para logging de pipelines (opcional)
+5. **🔑 Secrets**: Armazenamento automático no Key Vault
 
-#### **1. Desenvolvimento Local**
-```cmd
-# Criar ambiente de desenvolvimento
-python -m src.cli --action apply --projeto dev-local --location "East US 2" [credenciais]
-```
+### 🛡️ **Modelo de Segurança**
+- **SPN Dino**: Executa Terraform (privilégios subscription)
+- **SPN Criada**: Recebe apenas policies específicas dos recursos
+- **Key Vault**: Access policies granulares
+- **Databricks**: Unity Catalog com external storage
 
-#### **2. Ambiente de Produção**
-```cmd
-# Criar ambiente de produção
-python -m src.cli --action apply --projeto prod-data --location "East US 2" [credenciais]
-```
+## � Parâmetros CLI
 
-#### **3. Limpeza Completa**
-```cmd
-# Remover todos os recursos
-python -m src.cli --action destroy --projeto nome-projeto --location "East US 2" [credenciais]
-```
+| Parâmetro | Descrição | Obrigatório | Exemplo |
+|-----------|-----------|-------------|---------|
+| `--client-id` | Azure SPN Client ID | ✅ | `12345678-1234-...` |
+| `--client-secret` | Azure SPN Secret | ✅ | `your-secret-here` |
+| `--tenant_id` | Azure Tenant ID | ✅ | `87654321-4321-...` |
+| `--subscription-id` | Azure Subscription ID | ✅ | `11111111-2222-...` |
+| `--action` | Ação (apply/destroy) | ✅ | `apply` |
+| `--projeto` | Nome do projeto | ✅ | `analytics-platform` |
+| `--location` | Região Azure | ✅ | `"Brazil South"` |
+
+## � Recursos Avançados
+
+### 🔄 **Idempotência**
+- ✅ Múltiplas execuções sem conflitos
+- ✅ Detecção automática de resources existentes
+- ✅ State management inteligente
+
+### 📏 **Validações Automáticas**
+- ✅ Limites de nomenclatura Azure
+- ✅ Formato de parâmetros (UUIDs, nomes)
+- ✅ Permissões do Service Principal
+
+### 🔧 **Error Recovery**
+- ✅ Timeouts configuráveis
+- ✅ Retry logic para recursos instáveis
+- ✅ Rollback automático em caso de falha
+
+## 📞 Suporte
+
+### 🐛 **Reportar Issues**
+- Crie uma issue detalhada com logs completos
+- Inclua versões (Python, Terraform, DINO ARC)
+- Mascare informações sensíveis (IDs, secrets)
+
+### 📚 **Documentação Adicional**
+- **Azure Databricks**: [Documentação oficial](https://docs.microsoft.com/azure/databricks/)
+- **Unity Catalog**: [Guia Unity Catalog](https://docs.databricks.com/data-governance/unity-catalog/)
+- **Terraform Azure**: [Provider documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
 
 ---
 
-## 📞 **Suporte e Contribuição**
+## 🎉 **DINO ARC v2.3.0 - Pronto para Produção!**
 
-### **🐛 Reportar Problemas**
-1. Verificar logs em `logs/`
-2. Executar comandos de diagnóstico
-3. Abrir issue no repositório com:
-   - Comando executado
-   - Log de erro completo
-   - Versões das ferramentas
+**✨ Infraestrutura Azure moderna, segura e escalável em um comando!** ✨
 
-### **🤝 Contribuir**
-1. Fork do repositório
-2. Criar branch feature
-3. Commit das mudanças
-4. Abrir Pull Request
+**⚡ Desenvolvido com ❤️ para acelerar projetos de Data & Analytics** ⚡
 
-### **📄 Licença**
-Este projeto está sob licença MIT - veja o arquivo LICENSE para detalhes.
+## Requisitos
 
----
+- Python 3.8+
+- Azure CLI configurado
+- Credenciais de Service Principal do Azure
 
-## 🎉 **Conclusão**
+## Gerenciamento do Ambiente
 
-O **DINO ARC** fornece uma solução completa e automatizada para criação de infraestrutura Azure com Databricks Premium e Serverless Compute. Com este README, você tem todas as informações necessárias para:
+### Desativar Ambiente Virtual
+```bash
+deactivate
+```
 
-✅ **Configurar** o ambiente corretamente  
-✅ **Executar** os comandos com segurança  
-✅ **Habilitar** Serverless Compute automaticamente ou manualmente  
-✅ **Diagnosticar** e resolver problemas  
-✅ **Manter** a infraestrutura de forma eficiente  
+### Reativar Ambiente Virtual (sessões futuras)
+```bash
+# No Windows:
+dino_env\Scripts\activate
 
-🚀 **Happy Data Engineering!** 🚀
+# No Linux/Mac:
+source dino_env/bin/activate
+```

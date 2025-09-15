@@ -59,6 +59,17 @@ output "databricks_workspace_id" {
   value       = var.enable_databricks ? module.databricks[0].databricks_workspace_id : null
 }
 
+output "unity_catalog_storage_root" {
+  description = "URI root para Unity Catalog Storage (se habilitado)"
+  value       = var.enable_databricks ? module.databricks[0].unity_catalog_storage_root : null
+}
+
+output "databricks_access_token" {
+  description = "Token de acesso do Databricks (se habilitado)"
+  value       = var.enable_databricks ? module.databricks[0].databricks_access_token : null
+  sensitive   = true
+}
+
 # ========================
 # SQL Database Module Outputs (Conditional)
 # ========================
@@ -81,22 +92,6 @@ output "sql_database_name" {
 output "sql_connection_string_secret_name" {
   description = "Nome do secret no Key Vault com connection string (se habilitado)"
   value       = var.enable_sql_database ? "sql-connection-string" : null
-}
-
-# Unity Catalog Storage Outputs
-output "unity_catalog_storage_account_name" {
-  description = "Nome da storage account do Unity Catalog (se Databricks habilitado)"
-  value       = var.enable_databricks ? module.databricks[0].unity_catalog_storage_account_name : null
-}
-
-output "unity_catalog_container_name" {
-  description = "Nome do container do Unity Catalog (se Databricks habilitado)"
-  value       = var.enable_databricks ? module.databricks[0].unity_catalog_container_name : null
-}
-
-output "unity_catalog_storage_root" {
-  description = "URI root para Unity Catalog Storage (se Databricks habilitado)"
-  value       = var.enable_databricks ? module.databricks[0].unity_catalog_storage_root : null
 }
 
 output "dino_sdk_database_config" {

@@ -1,13 +1,26 @@
 """
-Testes para o módulo IngestionEngine do Dino SDK
+🦕 DINO SDK - IngestionEngine Tests
+
+Testes para validar o IngestionEngine e suas classes componentes.
 """
 
+import pytest
 import unittest
 import sys
 import os
+from unittest.mock import Mock, patch, MagicMock
 
 # Adicionar src ao path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from dino_sdk.ingestion_engine import (
+    IngestionEngine,
+    IngestionConfig,
+    ConfigValidator,
+    DataReader,
+    DataSaver,
+    ingest_csv_to_unity_catalog
+)
 
 from ingestion_engine import IngestionEngine
 

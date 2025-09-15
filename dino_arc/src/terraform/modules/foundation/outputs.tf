@@ -62,17 +62,6 @@ output "service_principal_tenant_id" {
   value       = data.azurerm_client_config.current.tenant_id
 }
 
-output "service_principal_client_id" {
-  description = "Client ID do Service Principal"
-  value       = azuread_application.main.client_id
-}
-
-output "service_principal_client_secret" {
-  description = "Client Secret do Service Principal"
-  value       = azuread_service_principal_password.main.value
-  sensitive   = true
-}
-
 # ========================
 # Tags Output
 # ========================
@@ -106,10 +95,11 @@ output "foundation_summary" {
       application_id = azuread_application.main.client_id
       tenant_id      = data.azurerm_client_config.current.tenant_id
     }
-    secrets_stored = {
-      client_id     = azurerm_key_vault_secret.spn_client_id.name
-      client_secret = azurerm_key_vault_secret.spn_client_secret.name
-      tenant_id     = azurerm_key_vault_secret.tenant_id.name
-    }
+    # secrets_stored comentado - secrets foram comentados em main.tf
+    # secrets_stored = {
+    #   client_id     = azurerm_key_vault_secret.spn_client_id.name
+    #   client_secret = azurerm_key_vault_secret.spn_client_secret.name
+    #   tenant_id     = azurerm_key_vault_secret.tenant_id.name
+    # }
   }
 }

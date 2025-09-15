@@ -18,6 +18,6 @@ setup(
         "console_scripts": [  
             "dino_arc=dino_arc:main"  
         ]  
-    },
+    },  
     python_requires=">=3.8"  
 ) 

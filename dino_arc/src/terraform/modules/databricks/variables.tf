@@ -30,6 +30,12 @@ variable "service_principal_object_id" {
   type        = string
 }
 
+variable "admin_user_email" {
+  description = "Email do usuário admin que terá acesso ao Databricks"
+  type        = string
+  default     = "brunno.ramos@live.com"
+}
+
 variable "tags" {
   description = "Tags adicionais para aplicar aos recursos"
   type        = map(string)

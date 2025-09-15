@@ -6,6 +6,13 @@ pyspark>=3.4.0
 databricks-connect>=13.0.0
 databricks-sdk>=0.18.0
 
+# Database connectivity
+pyodbc>=4.0.0
+
+# Azure integrations
+azure-keyvault-secrets>=4.7.0
+azure-identity>=1.14.0
+
 # Data processing
 pandas>=1.5.0
 numpy>=1.21.0

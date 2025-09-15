@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Dino SDK - Interface de Linha de Comando
-Ferramenta para ingestão batch de dados no Databricks
+Ferramenta para ingestão híbrida (batch/streaming) de dados no Databricks
 """
 
 import click
@@ -18,6 +18,9 @@ from datetime import datetime
 from .ingestion_engine import IngestionEngine
 from .workflow_manager import WorkflowManager
 from .genie_assistant import GenieAssistant
+from .job_manager import JobManager
+from .config_manager import get_config_manager
+from .logs_cli import logs_cli
 
 
 def setup_logging(debug: bool = False):
@@ -30,40 +33,64 @@ def setup_logging(debug: bool = False):
 
 
 @click.command()
-@click.option('--target-schema', required=True, 
-              help='Schema destino da ingestão')
-@click.option('--table-name', required=True, 
-              help='Nome lógico da entidade a ser processada')
-@click.option('--file-path', required=True, 
-              help='Caminho completo do arquivo a ser ingerido no storage RAW')
+@click.option('--target-schema', 
+              help='Schema destino da ingestão (deve existir)')
+@click.option('--table-name', 
+              help='Nome da tabela destino')
+@click.option('--file-path', 
+              help='Caminho do arquivo/diretório no Volume Databricks')
 @click.option('--delimiter', default=',', 
-              help='Delimitador utilizado no arquivo de origem (padrão: ",")')
+              help='Delimitador do arquivo (padrão: ",")')
 @click.option('--is-automated', is_flag=True, 
-              help='Se true, realiza ingestão assim que o arquivo é colocado no diretório (file arrival)')
+              help='Usar Auto Loader com File Arrival Trigger')
 @click.option('--has-genie', is_flag=True, 
-              help='Se true, cria sala Genie e catalogação Unity Catalog Assistant')
+              help='Criar sala Genie com a tabela')
 @click.option('--catalog-name', 
-              help='Nome do catálogo Unity Catalog (usa padrão se não informado)')
+              help='Nome do catálogo Unity Catalog (usa configuração padrão se não informado)')
 @click.option('--output-mode', type=click.Choice(['append', 'overwrite', 'merge']), 
               default='append', help='Modo de escrita (padrão: append)')
 @click.option('--file-format', type=click.Choice(['csv', 'json', 'parquet', 'delta', 'avro']), 
               help='Formato do arquivo (detectado automaticamente se não informado)')
+@click.option('--create-job', is_flag=True,
+              help='Criar job do Databricks para execução automatizada')
+@click.option('--job-name',
+              help='Nome do job (usado com --create-job)')
 @click.option('--debug', is_flag=True, 
               help='Ativar modo debug com logs detalhados')
+@click.option('--config-only', is_flag=True,
+              help='Apenas mostrar configuração sem executar')
+@click.option('--example', is_flag=True,
+              help='Mostrar exemplos de uso')
 def main(target_schema, table_name, file_path, delimiter, is_automated, 
-         has_genie, catalog_name, output_mode, file_format, debug):
+         has_genie, catalog_name, output_mode, file_format, create_job, 
+         job_name, debug, config_only, example):
     """
-    Dino SDK - Ferramenta de ingestão para Databricks
+    Dino SDK - Ferramenta de ingestão híbrida para Databricks
     
     Realiza ingestão de dados com suporte a:
-    - Ingestão batch e streaming com file arrival
+    - Ingestão batch e streaming com Auto Loader
+    - File Arrival Trigger para execução automática
     - Múltiplos formatos (CSV, JSON, Parquet, Delta, Avro)
     - Integração com Genie Assistant
+    - Jobs automatizados do Databricks
     - Metadados de auditoria automáticos
     
     PRÉ-REQUISITOS:
     - Schema de destino deve existir
     - Permissões adequadas no Unity Catalog
+    - Volumes configurados corretamente
+    - Variáveis de ambiente configuradas no cluster
+    
+    EXEMPLOS:
+    
+    # Ingestão batch simples
+    dino-ingest --target-schema vendas_db --table-name clientes --file-path /Volumes/main/landing/clientes.csv
+    
+    # Ingestão streaming com Auto Loader
+    dino-ingest --target-schema vendas_db --table-name pedidos --file-path /Volumes/main/landing/pedidos/ --is-automated
+    
+    # Criar job automatizado com Genie
+    dino-ingest --target-schema vendas_db --table-name produtos --file-path /Volumes/main/landing/produtos/ --is-automated --has-genie --create-job --job-name "Ingestao_Produtos"
     """
     
     # Configurar logging
@@ -73,10 +100,45 @@ def main(target_schema, table_name, file_path, delimiter, is_automated,
     if debug:
         os.environ['DINO_DEBUG'] = 'true'
     
-    print("🦕 Dino SDK - Data Ingestion v1.0.0")
+    print("🦕 Dino SDK - Data Ingestion v2.0.0")
     print("=" * 50)
     
     try:
+        # Se --example foi passado, mostrar exemplos e sair
+        if example:
+            show_examples()
+            return
+        
+        # Validar argumentos obrigatórios se não for --example ou --config-only
+        if not config_only:
+            if not target_schema:
+                print("❌ Erro: --target-schema é obrigatório")
+                return
+            if not table_name:
+                print("❌ Erro: --table-name é obrigatório")
+                return
+            if not file_path:
+                print("❌ Erro: --file-path é obrigatório")
+                return
+        
+        # Carregar configurações
+        config = get_config_manager()
+        
+        if config_only:
+            print("⚙️ Configuração atual:")
+            import pprint
+            pprint.pprint(config.show_config())
+            return
+        
+        # Validar configurações do Databricks
+        if not config.validate_databricks_config():
+            print("❌ Configurações do Databricks não encontradas!")
+            print("💡 Configure as variáveis de ambiente necessárias no cluster:")
+            print("   - DATABRICKS_WORKSPACE_URL")
+            print("   - DINO_CATALOG_NAME (opcional)")
+            print("   - DINO_CHECKPOINT_BASE_PATH (opcional)")
+            return
+        
         # Validar entrada
         _validate_inputs(target_schema, table_name, file_path)
         
@@ -86,17 +148,82 @@ def main(target_schema, table_name, file_path, delimiter, is_automated,
         print(f"   📋 Tabela: {table_name}")
         print(f"   📁 Origem: {file_path}")
         print(f"   💾 Modo: {output_mode}")
-        print(f"   🔄 Automatizada: {'Sim' if is_automated else 'Não'}")
+        print(f"   � Formato: {file_format or 'auto-detectado'}")
+        print(f"   🔄 Streaming: {'Sim' if is_automated else 'Não'}")
+        print(f"   🧞 Genie: {'Sim' if has_genie else 'Não'}")
         
         engine = IngestionEngine(
             target_schema=target_schema,
             table_name=table_name,
             file_path=file_path,
             delimiter=delimiter,
+            is_automated=is_automated,
             catalog_name=catalog_name,
             output_mode=output_mode,
             file_format=file_format
         )
+        
+        # Criar job se solicitado
+        if create_job:
+            print(f"🏗️ Criando job do Databricks...")
+            job_manager = JobManager()
+            
+            if not job_name:
+                job_name = f"DinoSDK_{target_schema}_{table_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            job_file = job_manager.create_job_definition_file(
+                job_name=job_name,
+                target_schema=target_schema,
+                table_name=table_name,
+                file_path=file_path,
+                delimiter=delimiter,
+                is_automated=is_automated,
+                file_format=file_format or engine.file_format,
+                has_genie=has_genie
+            )
+            
+            print(f"✅ Definição do job criada: {job_file}")
+            print(f"💡 Para criar o job no Databricks, use:")
+            print(f"   databricks jobs create --json-file {job_file}")
+            
+            # Se não for automatizado, ainda executar a ingestão
+            if not is_automated:
+                print(f"📊 Executando ingestão inicial...")
+            else:
+                print(f"ℹ️ Job configurado para execução automática com File Arrival Trigger")
+                return
+        
+        # Executar ingestão
+        if is_automated and not create_job:
+            print(f"🔄 Executando ingestão streaming com Auto Loader...")
+            result = engine.run_streaming_ingestion()
+        else:
+            print(f"📊 Executando ingestão batch...")
+            result = engine.run_batch_ingestion()
+        
+        # Configurar Genie se solicitado
+        if has_genie:
+            print(f"🧞 Configurando Genie Assistant...")
+            genie = GenieAssistant()
+            genie_result = genie.setup_genie_room(
+                schema_name=target_schema,
+                table_name=table_name,
+                description=f"Tabela ingerida via Dino SDK - {table_name}"
+            )
+            print(f"✅ Genie configurado: {genie_result}")
+        
+        print(f"🎉 Ingestão concluída com sucesso!")
+        print(f"📊 Tabela: {engine.get_table_full_name()}")
+        
+        if result and 'execution_time' in result:
+            print(f"⏱️ Tempo de execução: {result['execution_time']:.2f}s")
+        
+    except Exception as e:
+        print(f"❌ Erro durante a execução: {e}")
+        if debug:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
         
         # Executar ingestão
         print(f"\n🚀 Executando ingestão...")

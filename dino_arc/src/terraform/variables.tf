@@ -15,24 +15,6 @@ variable "subscription_id" {
   }
 }
 
-variable "client_id" {
-  description = "Azure Service Principal Client ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "client_secret" {
-  description = "Azure Service Principal Client Secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "tenant_id" {
-  description = "Azure Tenant ID"
-  type        = string
-  sensitive   = true
-}
-
 # ========================
 # Core Project Variables
 # ========================
@@ -62,7 +44,7 @@ variable "ambiente" {
 variable "location" {
   description = "Localização dos recursos no Azure"
   type        = string
-  default     = "East US 2"
+  default     = "East US"
   
   validation {
     condition = contains([

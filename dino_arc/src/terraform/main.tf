@@ -24,27 +24,19 @@ provider "azurerm" {
   features {
     key_vault {
       purge_soft_delete_on_destroy    = true
-      recover_soft_deleted_key_vaults = false
-    }
-    
-    resource_group {
-      prevent_deletion_if_contains_resources = false
+      recover_soft_deleted_key_vaults = true
     }
   }
   
-  # Usar credenciais do Service Principal
+  # Usar subscription_id se fornecida via variável
   subscription_id = var.subscription_id
-  client_id       = var.client_id
-  client_secret   = var.client_secret
-  tenant_id       = var.tenant_id
+  
+  # Configuração de timeouts para evitar problemas de estado
+  skip_provider_registration = false
 }
 
 # Configure the Azure AD Provider
-provider "azuread" {
-  client_id     = var.client_id
-  client_secret = var.client_secret
-  tenant_id     = var.tenant_id
-}
+provider "azuread" {}
 
 # ========================
 # Foundation Module

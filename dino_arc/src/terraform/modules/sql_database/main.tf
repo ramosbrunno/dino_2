@@ -23,23 +23,10 @@ resource "random_password" "sql_admin_password" {
   numeric = true
 }
 
-# Generate random suffix for unique naming (4 digits)
-resource "random_string" "sql_suffix" {
-  length  = 4
-  special = false
-  upper   = false
-  lower   = false
-  numeric = true
-}
-
-# Get current client config to access subscription_id for unique naming
-data "azurerm_client_config" "current" {}
-
 # Local values for resource naming and configuration
 locals {
-  # Nomenclatura seguindo padrão consistente
-  # SQL Server pode manter hífen por ser permitido
-  sql_server_name   = "${var.projeto}-${var.ambiente}-sql-${random_string.sql_suffix.result}"
+  # Nomenclatura descritiva: projeto-ambiente-tipo-funcionalidade
+  sql_server_name   = "${var.projeto}-${var.ambiente}-sql"
   sql_database_name = "${var.projeto}-${var.ambiente}-db-logs"
   
   # Tags padrão para o módulo SQL Database
@@ -121,6 +108,13 @@ resource "azurerm_key_vault_secret" "sql_server_name" {
   value        = azurerm_mssql_server.main.name
   key_vault_id = var.key_vault_id
 
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  # Garantir que SQL Server está pronto
+  depends_on = [azurerm_mssql_server.main]
+
   tags = {
     Project     = var.projeto
     Environment = var.ambiente
@@ -134,6 +128,13 @@ resource "azurerm_key_vault_secret" "sql_database_name" {
   name         = "sql-database-name"
   value        = azurerm_mssql_database.main.name
   key_vault_id = var.key_vault_id
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  # Garantir que SQL Database está pronto
+  depends_on = [azurerm_mssql_database.main]
 
   tags = {
     Project     = var.projeto
@@ -149,6 +150,13 @@ resource "azurerm_key_vault_secret" "sql_connection_string" {
   value        = "Server=tcp:${azurerm_mssql_server.main.fully_qualified_domain_name},1433;Initial Catalog=${azurerm_mssql_database.main.name};Persist Security Info=False;User ID=${var.sql_admin_username};Password=${random_password.sql_admin_password.result};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
   key_vault_id = var.key_vault_id
 
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  # Garantir que SQL resources estão prontos
+  depends_on = [azurerm_mssql_server.main, azurerm_mssql_database.main, random_password.sql_admin_password]
+
   tags = {
     Project     = var.projeto
     Environment = var.ambiente
@@ -162,6 +170,13 @@ resource "azurerm_key_vault_secret" "sql_admin_password" {
   name         = "sql-admin-password"
   value        = random_password.sql_admin_password.result
   key_vault_id = var.key_vault_id
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  # Garantir que password está pronto
+  depends_on = [random_password.sql_admin_password]
 
   tags = {
     Project     = var.projeto

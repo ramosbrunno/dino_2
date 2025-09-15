@@ -30,15 +30,16 @@ output "databricks_sku" {
 }
 
 # ========================
+# Storage Account Outputs (DBFS Root)
+# ========================
+
+# Outputs relacionados ao storage do DBFS removidos - Azure gerencia automaticamente
+
+# ========================
 # Unity Catalog Storage Outputs
 # ========================
 
 output "unity_catalog_storage_name" {
-  description = "Nome da Storage Account para Unity Catalog"
-  value       = azurerm_storage_account.unity_catalog.name
-}
-
-output "unity_catalog_storage_account_name" {
   description = "Nome da Storage Account para Unity Catalog"
   value       = azurerm_storage_account.unity_catalog.name
 }
@@ -61,6 +62,18 @@ output "unity_catalog_container_name" {
 output "unity_catalog_storage_root" {
   description = "URI root para Unity Catalog Storage"
   value       = "abfss://${azurerm_storage_container.unity_catalog.name}@${azurerm_storage_account.unity_catalog.name}.dfs.core.windows.net/"
+}
+
+# Commented out because we're using Databricks-managed access connector
+# output "unity_catalog_access_connector_id" {
+#   description = "ID do Access Connector para Unity Catalog"
+#   value       = azurerm_databricks_access_connector.unity_catalog.id
+# }
+
+output "databricks_access_token" {
+  description = "Token de acesso do Databricks (sensível)"
+  value       = random_password.databricks_token.result
+  sensitive   = true
 }
 
 # ========================
@@ -94,6 +107,7 @@ output "databricks_summary" {
       features     = ["unity-catalog", "serverless", "premium"]
     }
     storage = {
+      # dbfs_root removido - Azure gerencia automaticamente
       unity_catalog = {
         name               = azurerm_storage_account.unity_catalog.name
         id                 = azurerm_storage_account.unity_catalog.id

@@ -33,12 +33,11 @@ class AzureAuth:
     def authenticate(self) -> bool:
         """
         Autentica usando Service Principal e configura variáveis de ambiente
-        Para Terraform, apenas configuramos as variáveis ARM_* (não precisamos do Azure CLI)
         
         Returns:
             bool: True se autenticação bem-sucedida
         """
-        print("🔐 Configurando autenticação Azure via Service Principal...")
+        print("🔐 Autenticando com Azure via Service Principal...")
         
         try:
             # Configurar variáveis de ambiente para Terraform
@@ -46,21 +45,36 @@ class AzureAuth:
                 'ARM_CLIENT_ID': self.client_id,
                 'ARM_CLIENT_SECRET': self.client_secret,
                 'ARM_TENANT_ID': self.tenant_id,
-                'ARM_SUBSCRIPTION_ID': self.subscription_id,
-                'ARM_USE_CLI': 'false'  # Forçar uso do Service Principal
+                'ARM_SUBSCRIPTION_ID': self.subscription_id
             })
             
-            # Verificar se as credenciais estão válidas (teste simples)
-            if all([self.client_id, self.client_secret, self.tenant_id, self.subscription_id]):
-                print("✅ Credenciais configuradas para Terraform!")
+            # Testar autenticação usando Azure CLI
+            result = subprocess.run([
+                'az', 'login', '--service-principal',
+                '--username', self.client_id,
+                '--password', self.client_secret,
+                '--tenant', self.tenant_id
+            ], capture_output=True, text=True, timeout=60)
+            
+            if result.returncode == 0:
+                # Definir subscription ativa
+                subprocess.run([
+                    'az', 'account', 'set',
+                    '--subscription', self.subscription_id
+                ], capture_output=True, text=True, timeout=30)
+                
+                print("✅ Autenticação Azure realizada com sucesso!")
                 self._authenticated = True
                 return True
             else:
-                print("❌ Credenciais incompletas")
+                print(f"❌ Erro na autenticação Azure: {result.stderr}")
                 return False
                 
+        except subprocess.TimeoutExpired:
+            print("❌ Timeout na autenticação Azure")
+            return False
         except Exception as e:
-            print(f"❌ Erro ao configurar credenciais: {e}")
+            print(f"❌ Erro inesperado na autenticação: {e}")
             return False
     
     def get_environment_variables(self) -> Dict[str, str]:
