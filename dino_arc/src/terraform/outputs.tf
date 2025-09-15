@@ -59,6 +59,17 @@ output "databricks_workspace_id" {
   value       = var.enable_databricks ? module.databricks[0].databricks_workspace_id : null
 }
 
+output "unity_catalog_storage_root" {
+  description = "URI root para Unity Catalog Storage (se habilitado)"
+  value       = var.enable_databricks ? module.databricks[0].unity_catalog_storage_root : null
+}
+
+output "databricks_access_token" {
+  description = "Token de acesso do Databricks (se habilitado)"
+  value       = var.enable_databricks ? module.databricks[0].databricks_access_token : null
+  sensitive   = true
+}
+
 # ========================
 # SQL Database Module Outputs (Conditional)
 # ========================

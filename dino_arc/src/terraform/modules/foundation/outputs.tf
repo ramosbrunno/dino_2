@@ -95,10 +95,11 @@ output "foundation_summary" {
       application_id = azuread_application.main.client_id
       tenant_id      = data.azurerm_client_config.current.tenant_id
     }
-    secrets_stored = {
-      client_id     = azurerm_key_vault_secret.spn_client_id.name
-      client_secret = azurerm_key_vault_secret.spn_client_secret.name
-      tenant_id     = azurerm_key_vault_secret.tenant_id.name
-    }
+    # secrets_stored comentado - secrets foram comentados em main.tf
+    # secrets_stored = {
+    #   client_id     = azurerm_key_vault_secret.spn_client_id.name
+    #   client_secret = azurerm_key_vault_secret.spn_client_secret.name
+    #   tenant_id     = azurerm_key_vault_secret.tenant_id.name
+    # }
   }
 }

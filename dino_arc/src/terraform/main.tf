@@ -30,6 +30,9 @@ provider "azurerm" {
   
   # Usar subscription_id se fornecida via variável
   subscription_id = var.subscription_id
+  
+  # Configuração de timeouts para evitar problemas de estado
+  skip_provider_registration = false
 }
 
 # Configure the Azure AD Provider
